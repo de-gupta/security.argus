@@ -1,4 +1,8 @@
-package de.gupta.security.argus.api;
+package de.gupta.security.argus.api.authentication;
+
+import de.gupta.security.argus.api.identity.IdentityMappingConfiguration;
+import de.gupta.security.argus.api.token.AuthenticatedTokenConfiguration;
+import de.gupta.security.argus.api.trust.UpstreamTrustConfiguration;
 
 import java.time.Clock;
 import java.util.Objects;

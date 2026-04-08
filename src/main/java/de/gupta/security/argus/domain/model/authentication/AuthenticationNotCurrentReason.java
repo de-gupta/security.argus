@@ -1,4 +1,4 @@
-package de.gupta.security.argus.domain.model;
+package de.gupta.security.argus.domain.model.authentication;
 
 public enum AuthenticationNotCurrentReason implements DescribedReason
 {

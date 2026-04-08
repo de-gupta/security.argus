@@ -1,4 +1,6 @@
-package de.gupta.security.argus.domain.model;
+package de.gupta.security.argus.domain.model.authentication;
+
+import de.gupta.security.argus.domain.model.identity.AuthenticatedIdentity;
 
 import java.util.Objects;
 

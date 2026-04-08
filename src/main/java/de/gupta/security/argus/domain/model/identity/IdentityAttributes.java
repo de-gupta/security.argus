@@ -1,4 +1,4 @@
-package de.gupta.security.argus.domain.model;
+package de.gupta.security.argus.domain.model.identity;
 
 import java.time.Instant;
 import java.util.Optional;

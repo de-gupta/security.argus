@@ -1,7 +1,11 @@
 module de.gupta.security.argus
 {
-	exports de.gupta.security.argus.api;
-	exports de.gupta.security.argus.domain.model;
+	exports de.gupta.security.argus.api.authentication;
+	exports de.gupta.security.argus.api.identity;
+	exports de.gupta.security.argus.api.token;
+	exports de.gupta.security.argus.api.trust;
+	exports de.gupta.security.argus.domain.model.authentication;
+	exports de.gupta.security.argus.domain.model.identity;
 
 	requires de.gupta.security.hermes;
 	requires de.gupta.security.augustus;

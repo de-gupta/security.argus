@@ -1,4 +1,4 @@
-package de.gupta.security.argus.api;
+package de.gupta.security.argus.api.trust;
 
 import de.gupta.security.argus.utility.ValidationUtility;
 

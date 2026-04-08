@@ -1,4 +1,4 @@
-package de.gupta.security.argus.api;
+package de.gupta.security.argus.api.identity;
 
 @FunctionalInterface
 public interface LocalSubjectResolver<User>

@@ -1,6 +1,6 @@
-package de.gupta.security.argus.api;
+package de.gupta.security.argus.api.identity;
 
-import de.gupta.security.argus.domain.model.IdentityAttributes;
+import de.gupta.security.argus.domain.model.identity.IdentityAttributes;
 
 import java.util.Map;
 
