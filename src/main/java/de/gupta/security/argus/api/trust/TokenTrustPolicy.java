@@ -37,11 +37,6 @@ public record TokenTrustPolicy(Duration clockSkew,
 		return of(clockSkew, false, Set.of(), Optional.empty());
 	}
 
-	public static TokenTrustPolicy create()
-	{
-		return of(Duration.ZERO);
-	}
-
 	public TokenTrustPolicy
 	{
 		clockSkew = Objects.requireNonNull(clockSkew, "clockSkew must not be null");
