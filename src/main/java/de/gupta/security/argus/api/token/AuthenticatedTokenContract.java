@@ -31,7 +31,7 @@ public record AuthenticatedTokenContract(String issuer, Set<String> audiences, D
 	{
 		issuer = ValidationUtility.requireNonBlank(issuer, "issuer must not be blank");
 		audiences = Set.copyOf(Objects.requireNonNull(audiences, "audiences must not be null"));
-		timeToLive = Objects.requireNonNull(timeToLive, "timeToLive must not be null");
+		Objects.requireNonNull(timeToLive, "timeToLive must not be null");
 		if (timeToLive.isNegative() || timeToLive.isZero())
 		{
 			throw new IllegalArgumentException("timeToLive must be positive");

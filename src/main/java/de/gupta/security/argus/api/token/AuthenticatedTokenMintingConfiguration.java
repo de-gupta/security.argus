@@ -11,7 +11,7 @@ public record AuthenticatedTokenMintingConfiguration(TokenSignerConfiguration to
 
 	public AuthenticatedTokenMintingConfiguration
 	{
-		tokenSignerConfiguration = Objects.requireNonNull(tokenSignerConfiguration,
+		Objects.requireNonNull(tokenSignerConfiguration,
 				"tokenSignerConfiguration must not be null");
 	}
 }

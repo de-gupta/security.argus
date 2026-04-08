@@ -55,18 +55,16 @@ public record AuthenticatorConfiguration<ExternalIdentity, User>(
 
     public AuthenticatorConfiguration
     {
-        upstreamTrustConfiguration =
-                Objects.requireNonNull(upstreamTrustConfiguration, "upstreamTrustConfiguration must not be null");
-        authenticatedTokenContract = Objects.requireNonNull(authenticatedTokenContract,
+        Objects.requireNonNull(upstreamTrustConfiguration, "upstreamTrustConfiguration must not be null");
+        Objects.requireNonNull(authenticatedTokenContract,
                 "authenticatedTokenContract must not be null");
-        authenticatedTokenMintingConfiguration = Objects.requireNonNull(authenticatedTokenMintingConfiguration,
+        Objects.requireNonNull(authenticatedTokenMintingConfiguration,
                 "authenticatedTokenMintingConfiguration must not be null");
-        authenticatedTokenVerificationConfiguration =
-                Objects.requireNonNull(authenticatedTokenVerificationConfiguration,
-                        "authenticatedTokenVerificationConfiguration must not be null");
-        identityMappingConfiguration = Objects.requireNonNull(identityMappingConfiguration,
+        Objects.requireNonNull(authenticatedTokenVerificationConfiguration,
+                "authenticatedTokenVerificationConfiguration must not be null");
+        Objects.requireNonNull(identityMappingConfiguration,
                 "identityMappingConfiguration must not be null");
-        clock = Objects.requireNonNull(clock, "clock must not be null");
+        Objects.requireNonNull(clock, "clock must not be null");
     }
 
     public static final class Builder<ExternalIdentity, User>

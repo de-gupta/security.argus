@@ -3,7 +3,6 @@ package de.gupta.security.argus.domain.model.authentication.credential;
 import de.gupta.security.argus.domain.model.authentication.AuthenticationFailure;
 import de.gupta.security.argus.domain.model.authentication.FailureDetails;
 
-import java.util.Objects;
 import java.util.Optional;
 
 public record InvalidCredential(InvalidCredentialReason reason, Optional<FailureDetails> details)

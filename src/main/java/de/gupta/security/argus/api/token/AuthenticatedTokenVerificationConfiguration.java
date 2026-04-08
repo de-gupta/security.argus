@@ -13,6 +13,6 @@ public record AuthenticatedTokenVerificationConfiguration(TokenTrustPolicy trust
 
 	public AuthenticatedTokenVerificationConfiguration
 	{
-		trustPolicy = Objects.requireNonNull(trustPolicy, "trustPolicy must not be null");
+		Objects.requireNonNull(trustPolicy, "trustPolicy must not be null");
 	}
 }
