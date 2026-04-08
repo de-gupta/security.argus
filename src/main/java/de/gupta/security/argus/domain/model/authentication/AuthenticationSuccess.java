@@ -10,9 +10,4 @@ public record AuthenticationSuccess(AuthenticatedIdentity identity) implements A
 	{
 		return new AuthenticationSuccess(identity);
 	}
-
-	public AuthenticationSuccess
-	{
-		identity = Objects.requireNonNull(identity, "identity must not be null");
-	}
 }

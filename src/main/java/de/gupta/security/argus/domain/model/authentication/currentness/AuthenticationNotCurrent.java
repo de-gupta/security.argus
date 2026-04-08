@@ -17,10 +17,4 @@ public record AuthenticationNotCurrent(AuthenticationNotCurrentReason reason, Op
 	{
 		return new AuthenticationNotCurrent(reason, Optional.of(Objects.requireNonNull(details, "details must not be null")));
 	}
-
-	public AuthenticationNotCurrent
-	{
-		reason = Objects.requireNonNull(reason, "reason must not be null");
-		details = Objects.requireNonNull(details, "details must not be null");
-	}
 }

@@ -14,13 +14,4 @@ public record AuthenticatedTokenConfiguration(TokenSignerConfiguration tokenSign
 	{
 		return new AuthenticatedTokenConfiguration(tokenSignerConfiguration, authenticatedTokenContract, trustPolicy);
 	}
-
-	public AuthenticatedTokenConfiguration
-	{
-		tokenSignerConfiguration = Objects.requireNonNull(tokenSignerConfiguration,
-				"tokenSignerConfiguration must not be null");
-		authenticatedTokenContract = Objects.requireNonNull(authenticatedTokenContract,
-				"authenticatedTokenContract must not be null");
-		trustPolicy = Objects.requireNonNull(trustPolicy, "trustPolicy must not be null");
-	}
 }

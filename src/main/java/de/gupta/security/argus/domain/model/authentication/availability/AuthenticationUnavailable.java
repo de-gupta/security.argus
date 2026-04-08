@@ -17,10 +17,4 @@ public record AuthenticationUnavailable(AuthenticationUnavailableReason reason, 
 	{
 		return new AuthenticationUnavailable(reason, Optional.of(Objects.requireNonNull(details, "details must not be null")));
 	}
-
-	public AuthenticationUnavailable
-	{
-		reason = Objects.requireNonNull(reason, "reason must not be null");
-		details = Objects.requireNonNull(details, "details must not be null");
-	}
 }

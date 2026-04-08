@@ -17,10 +17,4 @@ public record IdentityNotResolved(IdentityNotResolvedReason reason, Optional<Str
 	{
 		return new IdentityNotResolved(reason, Optional.of(Objects.requireNonNull(details, "details must not be null")));
 	}
-
-	public IdentityNotResolved
-	{
-		reason = Objects.requireNonNull(reason, "reason must not be null");
-		details = Objects.requireNonNull(details, "details must not be null");
-	}
 }

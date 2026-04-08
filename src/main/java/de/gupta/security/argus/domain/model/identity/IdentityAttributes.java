@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.Set;
 
+// TODO: what re things like attribute, attributeValues, numericAttribute doing here?
 public interface IdentityAttributes
 {
 	String subject();
