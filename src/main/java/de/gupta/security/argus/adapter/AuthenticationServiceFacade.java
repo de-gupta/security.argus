@@ -1,8 +1,8 @@
-package de.gupta.security.argus.api.authentication;
+package de.gupta.security.argus.adapter;
 
 import de.gupta.security.argus.domain.model.authentication.AuthenticationResult;
 
-public sealed interface Authenticator permits ConfiguredAuthenticator
+public interface AuthenticationServiceFacade
 {
 	AuthenticationResult authenticate(final String token);
 }

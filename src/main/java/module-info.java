@@ -12,6 +12,8 @@ module de.gupta.security.argus
 	exports de.gupta.security.argus.domain.model.authentication.identity;
 	exports de.gupta.security.argus.domain.model.identity;
 
+	requires jjwt.api;
+
 	requires de.gupta.security.hermes;
 	requires de.gupta.security.augustus;
 	requires de.gupta.security.themis;

@@ -4,7 +4,8 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.Set;
 
-public interface AuthenticatedIdentity
+public sealed interface AuthenticatedIdentity
+		permits NormalizedTokenAuthenticatedIdentity
 {
 	String subject();
 
