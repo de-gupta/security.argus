@@ -37,10 +37,10 @@ final class AuthenticatorConfigurationTest
     final class FactoryMethod
     {
         @ParameterizedTest(name = "{0}")
-        @MethodSource("cases")
+        @MethodSource("factoryCases")
         void shouldCreateWithExplicitClock(final FactoryCase input)
         {
-            final AuthenticatorConfiguration<String> configuration = AuthenticatorConfiguration.of(
+            final AuthenticatorConfiguration<String, String> configuration = AuthenticatorConfiguration.of(
                     input.upstreamTrustConfiguration(),
                     input.authenticatedTokenContract(),
                     input.authenticatedTokenMintingConfiguration(),
@@ -48,31 +48,43 @@ final class AuthenticatorConfigurationTest
                     input.identityMappingConfiguration(),
                     input.clock());
 
-            assertThat(configuration.upstreamTrustConfiguration()).isEqualTo(input.upstreamTrustConfiguration());
-            assertThat(configuration.authenticatedTokenContract()).isEqualTo(input.authenticatedTokenContract());
+            assertThat(configuration.upstreamTrustConfiguration())
+                    .as(input.description())
+                    .isEqualTo(input.upstreamTrustConfiguration());
+            assertThat(configuration.authenticatedTokenContract())
+                    .as(input.description())
+                    .isEqualTo(input.authenticatedTokenContract());
             assertThat(configuration.authenticatedTokenMintingConfiguration())
+                    .as(input.description())
                     .isEqualTo(input.authenticatedTokenMintingConfiguration());
             assertThat(configuration.authenticatedTokenVerificationConfiguration())
+                    .as(input.description())
                     .isEqualTo(input.authenticatedTokenVerificationConfiguration());
-            assertThat(configuration.identityMappingConfiguration()).isEqualTo(input.identityMappingConfiguration());
-            assertThat(configuration.clock()).isEqualTo(input.clock());
+            assertThat(configuration.identityMappingConfiguration())
+                    .as(input.description())
+                    .isEqualTo(input.identityMappingConfiguration());
+            assertThat(configuration.clock())
+                    .as(input.description())
+                    .isEqualTo(input.clock());
         }
 
         @ParameterizedTest(name = "{0}")
-        @MethodSource("minimalCases")
+        @MethodSource("minimalFactoryCases")
         void shouldDefaultClockToSystemUtc(final MinimalFactoryCase input)
         {
-            final AuthenticatorConfiguration<String> configuration = AuthenticatorConfiguration.of(
+            final AuthenticatorConfiguration<String, String> configuration = AuthenticatorConfiguration.of(
                     input.upstreamTrustConfiguration(),
                     input.authenticatedTokenContract(),
                     input.authenticatedTokenMintingConfiguration(),
                     input.authenticatedTokenVerificationConfiguration(),
                     input.identityMappingConfiguration());
 
-            assertThat(configuration.clock().getZone()).isEqualTo(ZoneOffset.UTC);
+            assertThat(configuration.clock().getZone())
+                    .as(input.description())
+                    .isEqualTo(ZoneOffset.UTC);
         }
 
-        private Stream<Arguments> cases()
+        private Stream<Arguments> factoryCases()
         {
             return Stream.of(new FactoryCase("keeps split token settings and explicit clock",
                             upstreamTrustConfiguration(),
@@ -84,7 +96,78 @@ final class AuthenticatorConfigurationTest
                          .map(Arguments::of);
         }
 
-        private Stream<Arguments> minimalCases()
+        private Stream<Arguments> minimalFactoryCases()
+        {
+            return Stream.of(new MinimalFactoryCase("uses UTC clock when omitted",
+                            upstreamTrustConfiguration(),
+                            authenticatedTokenContract(),
+                            authenticatedTokenMintingConfiguration(),
+                            authenticatedTokenVerificationConfiguration(),
+                            identityMappingConfiguration()))
+                         .map(Arguments::of);
+        }
+    }
+
+    @Nested
+    @DisplayName("as builder")
+    @TestInstance(PER_CLASS)
+    final class Builder
+    {
+        @ParameterizedTest(name = "{0}")
+        @MethodSource("factoryCases")
+        void shouldCreateWithExplicitClock(final FactoryCase input)
+        {
+            final AuthenticatorConfiguration<String, String> configuration =
+                    AuthenticatorConfiguration.<String, String>builder()
+                            .upstreamTrustConfiguration(input.upstreamTrustConfiguration())
+                            .authenticatedTokenContract(input.authenticatedTokenContract())
+                            .authenticatedTokenMintingConfiguration(input.authenticatedTokenMintingConfiguration())
+                            .authenticatedTokenVerificationConfiguration(input.authenticatedTokenVerificationConfiguration())
+                            .identityMappingConfiguration(input.identityMappingConfiguration())
+                            .clock(input.clock())
+                            .build();
+
+            assertThat(configuration)
+                    .as(input.description())
+                    .isEqualTo(AuthenticatorConfiguration.of(input.upstreamTrustConfiguration(),
+                            input.authenticatedTokenContract(),
+                            input.authenticatedTokenMintingConfiguration(),
+                            input.authenticatedTokenVerificationConfiguration(),
+                            input.identityMappingConfiguration(),
+                            input.clock()));
+        }
+
+        @ParameterizedTest(name = "{0}")
+        @MethodSource("minimalFactoryCases")
+        void shouldDefaultClockToSystemUtc(final MinimalFactoryCase input)
+        {
+            final AuthenticatorConfiguration<String, String> configuration =
+                    AuthenticatorConfiguration.<String, String>builder()
+                            .upstreamTrustConfiguration(input.upstreamTrustConfiguration())
+                            .authenticatedTokenContract(input.authenticatedTokenContract())
+                            .authenticatedTokenMintingConfiguration(input.authenticatedTokenMintingConfiguration())
+                            .authenticatedTokenVerificationConfiguration(input.authenticatedTokenVerificationConfiguration())
+                            .identityMappingConfiguration(input.identityMappingConfiguration())
+                            .build();
+
+            assertThat(configuration.clock().getZone())
+                    .as(input.description())
+                    .isEqualTo(ZoneOffset.UTC);
+        }
+
+        private Stream<Arguments> factoryCases()
+        {
+            return Stream.of(new FactoryCase("keeps split token settings and explicit clock",
+                            upstreamTrustConfiguration(),
+                            authenticatedTokenContract(),
+                            authenticatedTokenMintingConfiguration(),
+                            authenticatedTokenVerificationConfiguration(),
+                            identityMappingConfiguration(),
+                            clock()))
+                         .map(Arguments::of);
+        }
+
+        private Stream<Arguments> minimalFactoryCases()
         {
             return Stream.of(new MinimalFactoryCase("uses UTC clock when omitted",
                             upstreamTrustConfiguration(),
@@ -111,6 +194,7 @@ final class AuthenticatorConfigurationTest
                             input.authenticatedTokenVerificationConfiguration(),
                             input.identityMappingConfiguration(),
                             input.clock()))
+                    .as(input.description())
                     .isInstanceOf(NullPointerException.class)
                     .hasMessage(input.expectedMessage());
         }
@@ -191,7 +275,7 @@ final class AuthenticatorConfigurationTest
                 TokenTrustPolicy.of(Duration.ZERO, true, Set.of("inventory"), Optional.of("argus")));
     }
 
-    private static IdentityMappingConfiguration<String> identityMappingConfiguration()
+    private static IdentityMappingConfiguration<String, String> identityMappingConfiguration()
     {
         return IdentityMappingConfiguration.of(externalId -> Optional.of("local-" + externalId),
                 user -> user,
@@ -209,7 +293,7 @@ final class AuthenticatorConfigurationTest
                                AuthenticatedTokenContract authenticatedTokenContract,
                                AuthenticatedTokenMintingConfiguration authenticatedTokenMintingConfiguration,
                                AuthenticatedTokenVerificationConfiguration authenticatedTokenVerificationConfiguration,
-                               IdentityMappingConfiguration<String> identityMappingConfiguration,
+                               IdentityMappingConfiguration<String, String> identityMappingConfiguration,
                                Clock clock)
     {
         @Override
@@ -224,7 +308,7 @@ final class AuthenticatorConfigurationTest
                                       AuthenticatedTokenContract authenticatedTokenContract,
                                       AuthenticatedTokenMintingConfiguration authenticatedTokenMintingConfiguration,
                                       AuthenticatedTokenVerificationConfiguration authenticatedTokenVerificationConfiguration,
-                                      IdentityMappingConfiguration<String> identityMappingConfiguration)
+                                      IdentityMappingConfiguration<String, String> identityMappingConfiguration)
     {
         @Override
         public String toString()
@@ -238,7 +322,7 @@ final class AuthenticatorConfigurationTest
                             AuthenticatedTokenContract authenticatedTokenContract,
                             AuthenticatedTokenMintingConfiguration authenticatedTokenMintingConfiguration,
                             AuthenticatedTokenVerificationConfiguration authenticatedTokenVerificationConfiguration,
-                            IdentityMappingConfiguration<String> identityMappingConfiguration,
+                            IdentityMappingConfiguration<String, String> identityMappingConfiguration,
                             Clock clock,
                             String expectedMessage)
     {

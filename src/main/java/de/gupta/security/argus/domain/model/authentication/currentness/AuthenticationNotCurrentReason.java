@@ -1,8 +1,8 @@
 package de.gupta.security.argus.domain.model.authentication.currentness;
 
-import de.gupta.security.argus.domain.description.DescribedReason;
+import de.gupta.security.argus.domain.description.Described;
 
-public enum AuthenticationNotCurrentReason implements DescribedReason
+public enum AuthenticationNotCurrentReason implements Described
 {
 	VERSION_MISMATCH("The authenticated identity is no longer current because its version is outdated."),
 	REVOKED("The authenticated identity is no longer current because it has been revoked."),

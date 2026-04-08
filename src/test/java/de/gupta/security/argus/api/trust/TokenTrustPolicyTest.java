@@ -32,9 +32,15 @@ final class TokenTrustPolicyTest
         {
             final TokenTrustPolicy policy = TokenTrustPolicy.of(Duration.ZERO);
 
-            assertThat(policy.requireSubject()).isFalse();
-            assertThat(policy.expectedAudiences()).isEmpty();
-            assertThat(policy.expectedIssuer()).isEmpty();
+            assertThat(policy.requireSubject())
+                    .as("does not require a subject by default")
+                    .isFalse();
+            assertThat(policy.expectedAudiences())
+                    .as("does not require audiences by default")
+                    .isEmpty();
+            assertThat(policy.expectedIssuer())
+                    .as("does not require an issuer by default")
+                    .isEmpty();
         }
 
         @Test
@@ -46,7 +52,9 @@ final class TokenTrustPolicyTest
 
             audiences.add("reporting");
 
-            assertThat(policy.expectedAudiences()).containsExactly("inventory");
+            assertThat(policy.expectedAudiences())
+                    .as("keeps expected audiences stable after caller mutation")
+                    .containsExactly("inventory");
         }
     }
 
@@ -60,6 +68,7 @@ final class TokenTrustPolicyTest
         void shouldRejectNegativeClockSkew(final ClockSkewCase input)
         {
             assertThatThrownBy(() -> TokenTrustPolicy.of(input.clockSkew()))
+                    .as(input.description())
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("clockSkew must not be negative");
         }
@@ -69,6 +78,7 @@ final class TokenTrustPolicyTest
         void shouldRejectBlankExpectedIssuer(final ExpectedIssuerCase input)
         {
             assertThatThrownBy(() -> TokenTrustPolicy.of(Duration.ZERO, true, Set.of("inventory"), input.expectedIssuer()))
+                    .as(input.description())
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("expectedIssuer must not be blank");
         }
@@ -78,6 +88,7 @@ final class TokenTrustPolicyTest
         void shouldRejectNullFields(final NullFieldCase input)
         {
             assertThatThrownBy(input::invoke)
+                    .as(input.description())
                     .isInstanceOf(NullPointerException.class)
                     .hasMessage(input.expectedMessage());
         }

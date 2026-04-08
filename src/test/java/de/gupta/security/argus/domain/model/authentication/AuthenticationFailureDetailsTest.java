@@ -34,7 +34,9 @@ final class AuthenticationFailureDetailsTest
         @MethodSource("cases")
         void shouldWrapStringsInFailureDetails(final StringOverloadCase input)
         {
-            assertThat(detailsOf(input.failure())).contains(FailureDetails.of(input.message()));
+            assertThat(detailsOf(input.failure()))
+                    .as(input.description())
+                    .contains(FailureDetails.of(input.message()));
         }
 
         private Stream<Arguments> cases()
@@ -67,7 +69,9 @@ final class AuthenticationFailureDetailsTest
         @MethodSource("cases")
         void shouldStoreExplicitFailureDetails(final ExplicitDetailsCase input)
         {
-            assertThat(detailsOf(input.failure())).contains(input.details());
+            assertThat(detailsOf(input.failure()))
+                    .as(input.description())
+                    .contains(input.details());
         }
 
         private Stream<Arguments> cases()
@@ -102,7 +106,9 @@ final class AuthenticationFailureDetailsTest
         @MethodSource("cases")
         void shouldLeaveDetailsEmpty(final EmptyDetailsCase input)
         {
-            assertThat(detailsOf(input.failure())).isEqualTo(Optional.empty());
+            assertThat(detailsOf(input.failure()))
+                    .as(input.description())
+                    .isEqualTo(Optional.empty());
         }
 
         private Stream<Arguments> cases()

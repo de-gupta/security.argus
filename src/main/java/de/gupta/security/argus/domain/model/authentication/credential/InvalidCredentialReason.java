@@ -1,8 +1,8 @@
 package de.gupta.security.argus.domain.model.authentication.credential;
 
-import de.gupta.security.argus.domain.description.DescribedReason;
+import de.gupta.security.argus.domain.description.Described;
 
-public enum InvalidCredentialReason implements DescribedReason
+public enum InvalidCredentialReason implements Described
 {
 	MALFORMED("The credential could not be parsed as a supported token."),
 	INVALID_SIGNATURE("The credential signature could not be trusted."),

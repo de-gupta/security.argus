@@ -26,6 +26,7 @@ final class FailureDetailsTest
         void shouldCreateValueObjects(final FailureDetailsCase input)
         {
             assertThat(FailureDetails.of(input.message()))
+                    .as(input.description())
                     .isEqualTo(new FailureDetails(input.message()));
         }
 

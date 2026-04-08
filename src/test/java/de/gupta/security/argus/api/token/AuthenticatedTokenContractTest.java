@@ -37,7 +37,9 @@ final class AuthenticatedTokenContractTest
 
             audiences.add("reporting");
 
-            assertThat(contract.audiences()).containsExactly("inventory");
+            assertThat(contract.audiences())
+                    .as("keeps the contract audiences stable after caller mutation")
+                    .containsExactly("inventory");
         }
 
         @Test
@@ -46,10 +48,18 @@ final class AuthenticatedTokenContractTest
             final AuthenticatedTokenContract contract =
                     AuthenticatedTokenContract.of("argus", Set.of("inventory"), Duration.ofMinutes(10));
 
-            assertThat(contract.roleAttributeName()).isEqualTo("roles");
-            assertThat(contract.versionAttributeName()).isEqualTo("ver");
-            assertThat(contract.upstreamIssuerAttributeName()).contains("upstream_iss");
-            assertThat(contract.includeTokenId()).isTrue();
+            assertThat(contract.roleAttributeName())
+                    .as("uses the default role attribute name")
+                    .isEqualTo("roles");
+            assertThat(contract.versionAttributeName())
+                    .as("uses the default version attribute name")
+                    .isEqualTo("ver");
+            assertThat(contract.upstreamIssuerAttributeName())
+                    .as("keeps the upstream issuer attribute by default")
+                    .contains("upstream_iss");
+            assertThat(contract.includeTokenId())
+                    .as("includes a token id by default")
+                    .isTrue();
         }
     }
 
@@ -69,6 +79,7 @@ final class AuthenticatedTokenContractTest
                             "ver",
                             Optional.of("upstream_iss"),
                             true))
+                    .as(input.description())
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("timeToLive must be positive");
         }
@@ -78,6 +89,7 @@ final class AuthenticatedTokenContractTest
         void shouldRejectBlankFields(final BlankFieldCase input)
         {
             assertThatThrownBy(input::invoke)
+                    .as(input.description())
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage(input.expectedMessage());
         }
@@ -87,6 +99,7 @@ final class AuthenticatedTokenContractTest
         void shouldRejectNullFields(final NullFieldCase input)
         {
             assertThatThrownBy(input::invoke)
+                    .as(input.description())
                     .isInstanceOf(NullPointerException.class)
                     .hasMessage(input.expectedMessage());
         }

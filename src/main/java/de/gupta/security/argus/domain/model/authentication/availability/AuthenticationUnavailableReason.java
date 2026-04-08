@@ -1,8 +1,8 @@
 package de.gupta.security.argus.domain.model.authentication.availability;
 
-import de.gupta.security.argus.domain.description.DescribedReason;
+import de.gupta.security.argus.domain.description.Described;
 
-public enum AuthenticationUnavailableReason implements DescribedReason
+public enum AuthenticationUnavailableReason implements Described
 {
 	SERVICE_UNAVAILABLE("Authentication could not be completed because the authentication service encountered an internal problem."),
 	IDENTITY_STATE_UNAVAILABLE("Authentication could not be completed because current identity state could not be checked.");
