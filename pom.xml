@@ -17,9 +17,9 @@
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <themis.vesion>2.1.0</themis.vesion>
-        <hermes.vesion>1.0.0</hermes.vesion>
-        <augustus.vesion>1.0.0</augustus.vesion>
+        <themis.version>2.1.0</themis.version>
+        <hermes.version>1.0.0</hermes.version>
+        <augustus.version>1.0.0</augustus.version>
 
         <aletheia.version>0.4.2</aletheia.version>
         <athena.version>0.4.0</athena.version>
@@ -40,17 +40,17 @@
         <dependency>
             <groupId>io.github.de-gupta</groupId>
             <artifactId>security.themis</artifactId>
-            <version>${themis.vesion}</version>
+            <version>${themis.version}</version>
         </dependency>
         <dependency>
             <groupId>io.github.de-gupta</groupId>
             <artifactId>security.hermes</artifactId>
-            <version>${hermes.vesion}</version>
+            <version>${hermes.version}</version>
         </dependency>
         <dependency>
             <groupId>io.github.de-gupta</groupId>
             <artifactId>security.augustus</artifactId>
-            <version>${augustus.vesion}</version>
+            <version>${augustus.version}</version>
         </dependency>
         <dependency>
             <groupId>io.github.de-gupta</groupId>
