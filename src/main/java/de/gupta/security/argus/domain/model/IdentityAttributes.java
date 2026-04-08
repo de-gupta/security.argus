@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.Set;
 
-public interface TrustedIdentity
+public interface IdentityAttributes
 {
 	String subject();
 
@@ -16,9 +16,9 @@ public interface TrustedIdentity
 
 	Optional<Instant> expiresAt();
 
-	Optional<String> stringClaim(String name);
+	Optional<String> attribute(String name);
 
-	Set<String> stringListClaim(String name);
+	Set<String> attributeValues(String name);
 
-	Optional<Long> longClaim(String name);
+	Optional<Long> numericAttribute(String name);
 }

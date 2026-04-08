@@ -1,9 +1,20 @@
 package de.gupta.security.argus.domain.model;
 
-public enum AuthenticationUnavailableReason
+public enum AuthenticationUnavailableReason implements DescribedReason
 {
-	TOKEN_ISSUANCE_FAILED,
-	INTERNAL_VERIFICATION_FAILED,
-	CURRENTNESS_CHECK_FAILED,
-	PIPELINE_FAILURE
+	SERVICE_UNAVAILABLE("Authentication could not be completed because the authentication service encountered an internal problem."),
+	IDENTITY_STATE_UNAVAILABLE("Authentication could not be completed because current identity state could not be checked.");
+
+	private final String description;
+
+	AuthenticationUnavailableReason(final String description)
+	{
+		this.description = description;
+	}
+
+	@Override
+	public String description()
+	{
+		return description;
+	}
 }
