@@ -8,23 +8,20 @@ public record IdentityMappingConfiguration<User>(String externalIdentityAttribut
                                                  UserResolver<String, User> userResolver,
                                                  LocalSubjectResolver<User> localSubjectResolver,
                                                  RoleResolver<User> roleResolver,
-                                                 UserTokenVersionResolver<User> userTokenVersionResolver,
-                                                 AttributeEnricher<User> attributeEnricher)
+                                                 UserTokenVersionResolver<User> userTokenVersionResolver)
 {
 	public static <User> IdentityMappingConfiguration<User> of(
 			final String externalIdentityAttributeName,
 			final UserResolver<String, User> userResolver,
 			final LocalSubjectResolver<User> localSubjectResolver,
 			final RoleResolver<User> roleResolver,
-			final UserTokenVersionResolver<User> userTokenVersionResolver,
-			final AttributeEnricher<User> attributeEnricher)
+			final UserTokenVersionResolver<User> userTokenVersionResolver)
 	{
 		return new IdentityMappingConfiguration<>(externalIdentityAttributeName,
 				userResolver,
 				localSubjectResolver,
 				roleResolver,
-				userTokenVersionResolver,
-				attributeEnricher);
+				userTokenVersionResolver);
 	}
 
 	public static <User> IdentityMappingConfiguration<User> of(
@@ -37,8 +34,7 @@ public record IdentityMappingConfiguration<User>(String externalIdentityAttribut
 				userResolver,
 				localSubjectResolver,
 				roleResolver,
-				userTokenVersionResolver,
-				AttributeEnricher.none());
+				userTokenVersionResolver);
 	}
 
 	public IdentityMappingConfiguration
@@ -50,6 +46,5 @@ public record IdentityMappingConfiguration<User>(String externalIdentityAttribut
 		roleResolver = Objects.requireNonNull(roleResolver, "roleResolver must not be null");
 		userTokenVersionResolver = Objects.requireNonNull(userTokenVersionResolver,
 				"userTokenVersionResolver must not be null");
-		attributeEnricher = Objects.requireNonNull(attributeEnricher, "attributeEnricher must not be null");
 	}
 }
