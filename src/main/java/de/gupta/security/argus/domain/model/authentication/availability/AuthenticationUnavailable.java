@@ -1,4 +1,6 @@
-package de.gupta.security.argus.domain.model.authentication;
+package de.gupta.security.argus.domain.model.authentication.availability;
+
+import de.gupta.security.argus.domain.model.authentication.AuthenticationFailure;
 
 import java.util.Objects;
 import java.util.Optional;

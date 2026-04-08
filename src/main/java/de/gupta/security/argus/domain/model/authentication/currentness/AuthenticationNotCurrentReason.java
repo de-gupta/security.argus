@@ -1,4 +1,6 @@
-package de.gupta.security.argus.domain.model.authentication;
+package de.gupta.security.argus.domain.model.authentication.currentness;
+
+import de.gupta.security.argus.domain.description.DescribedReason;
 
 public enum AuthenticationNotCurrentReason implements DescribedReason
 {

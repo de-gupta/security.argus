@@ -1,4 +1,4 @@
-package de.gupta.security.argus.domain.model.authentication;
+package de.gupta.security.argus.domain.description;
 
 public interface DescribedReason
 {
