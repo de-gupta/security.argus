@@ -17,16 +17,8 @@
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
+        <security.bom.version>0.1.1</security.bom.version>
         <themis.version>2.3.0</themis.version>
-        <hermes.version>1.1.0</hermes.version>
-        <augustus.version>1.0.1</augustus.version>
-
-        <aletheia.version>0.5.0</aletheia.version>
-        <athena.version>0.4.0</athena.version>
-        <jjwt.version>0.13.0</jjwt.version>
-
-        <junit.jupiter.version>5.13.1</junit.jupiter.version>
-        <assertj.core.version>3.27.3</assertj.core.version>
 
         <maven.release.plugin.version>3.1.1</maven.release.plugin.version>
         <maven.gpg.plugin.version>3.2.8</maven.gpg.plugin.version>
@@ -37,49 +29,53 @@
         <jacoco.version>0.8.14</jacoco.version>
     </properties>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.github.de-gupta</groupId>
+                <artifactId>security.bom</artifactId>
+                <version>${security.bom.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>io.github.de-gupta</groupId>
             <artifactId>security.themis</artifactId>
-            <version>${themis.version}</version>
         </dependency>
         <dependency>
             <groupId>io.github.de-gupta</groupId>
             <artifactId>security.hermes</artifactId>
-            <version>${hermes.version}</version>
         </dependency>
         <dependency>
             <groupId>io.github.de-gupta</groupId>
             <artifactId>security.augustus</artifactId>
-            <version>${augustus.version}</version>
         </dependency>
         <dependency>
             <groupId>io.github.de-gupta</groupId>
             <artifactId>aletheia</artifactId>
-            <version>${aletheia.version}</version>
         </dependency>
         <dependency>
             <groupId>io.github.de-gupta</groupId>
             <artifactId>athena</artifactId>
-            <version>${athena.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>${junit.jupiter.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
-            <version>${assertj.core.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
-            <version>${jjwt.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
