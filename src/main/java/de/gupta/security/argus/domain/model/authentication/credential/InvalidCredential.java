@@ -22,4 +22,10 @@ public record InvalidCredential(InvalidCredentialReason reason, Optional<Failure
 	{
 		return new InvalidCredential(reason, Optional.of(details));
 	}
+
+	@Override
+	public String description()
+	{
+		return reason.description();
+	}
 }

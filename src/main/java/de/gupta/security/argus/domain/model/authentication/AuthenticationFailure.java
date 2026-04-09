@@ -11,4 +11,6 @@ public sealed interface AuthenticationFailure extends AuthenticationResult
 		permits InvalidCredential, IdentityNotResolved, AuthenticationNotCurrent, AuthenticationUnavailable
 {
 	Optional<FailureDetails> details();
+
+	String description();
 }

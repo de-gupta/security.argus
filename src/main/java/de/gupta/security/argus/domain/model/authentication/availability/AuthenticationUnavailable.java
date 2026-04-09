@@ -23,4 +23,10 @@ public record AuthenticationUnavailable(AuthenticationUnavailableReason reason, 
 	{
 		return new AuthenticationUnavailable(reason, Optional.of(details));
 	}
+
+	@Override
+	public String description()
+	{
+		return reason.description();
+	}
 }

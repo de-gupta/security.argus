@@ -22,4 +22,10 @@ public record IdentityNotResolved(IdentityNotResolvedReason reason, Optional<Fai
 	{
 		return new IdentityNotResolved(reason, Optional.of(details));
 	}
+
+	@Override
+	public String description()
+	{
+		return reason.description();
+	}
 }

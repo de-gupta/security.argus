@@ -22,4 +22,10 @@ public record AuthenticationNotCurrent(AuthenticationNotCurrentReason reason, Op
 	{
 		return new AuthenticationNotCurrent(reason, Optional.of(details));
 	}
+
+	@Override
+	public String description()
+	{
+		return reason.description();
+	}
 }
