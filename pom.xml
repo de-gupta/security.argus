@@ -18,7 +18,6 @@
     <url>https://github.com/de-gupta/security.argus.git</url>
 
     <properties>
-        <security.bom.version>0.1.3</security.bom.version>
         <security.dependencies.bom.version>0.1.1</security.dependencies.bom.version>
 
         <themis.version>2.3.0</themis.version>
