@@ -1,5 +1,6 @@
 package de.gupta.security.argus.api.authentication;
 
+import de.gupta.security.argus.api.identity.ExternalIdentityAdapter;
 import de.gupta.security.argus.api.identity.IdentityMappingConfiguration;
 import de.gupta.security.argus.api.token.AuthenticatedTokenContract;
 import de.gupta.security.argus.api.token.AuthenticatedTokenMintingConfiguration;
@@ -31,6 +32,93 @@ import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 @TestInstance(PER_CLASS)
 final class AuthenticatorConfigurationTest
 {
+    private static IdentityMappingConfiguration<String, String> identityMappingConfiguration()
+    {
+        return IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
+                externalId -> Optional.of("local-" + externalId),
+                user -> user,
+                user -> Set.of("ROLE_" + user.toUpperCase()),
+                user -> (long) Objects.requireNonNull(user).length(),
+                subject -> (long) Objects.requireNonNull(subject).length());
+    }
+
+    private Stream<Arguments> sharedFactoryCases()
+    {
+        return Stream.of(new FactoryCase("keeps split token settings and explicit clock",
+                             upstreamTrustConfiguration(),
+                             authenticatedTokenContract(),
+                             authenticatedTokenMintingConfiguration(),
+                             authenticatedTokenVerificationConfiguration(),
+                             identityMappingConfiguration(),
+                             clock()))
+                     .map(Arguments::of);
+    }
+
+    private Stream<Arguments> sharedMinimalFactoryCases()
+    {
+        return Stream.of(new MinimalFactoryCase("uses UTC clock when omitted",
+                             upstreamTrustConfiguration(),
+                             authenticatedTokenContract(),
+                             authenticatedTokenMintingConfiguration(),
+                             authenticatedTokenVerificationConfiguration(),
+                             identityMappingConfiguration()))
+                     .map(Arguments::of);
+    }
+
+    private Stream<Arguments> sharedNullCases()
+    {
+        return Stream.of(
+                             new NullCase("when upstream trust configuration is missing",
+                                     null,
+                                     authenticatedTokenContract(),
+                                     authenticatedTokenMintingConfiguration(),
+                                     authenticatedTokenVerificationConfiguration(),
+                                     identityMappingConfiguration(),
+                                     clock(),
+                                     "upstreamTrustConfiguration must not be null"),
+                             new NullCase("when authenticated token contract is missing",
+                                     upstreamTrustConfiguration(),
+                                     null,
+                                     authenticatedTokenMintingConfiguration(),
+                                     authenticatedTokenVerificationConfiguration(),
+                                     identityMappingConfiguration(),
+                                     clock(),
+                                     "authenticatedTokenContract must not be null"),
+                             new NullCase("when authenticated token minting configuration is missing",
+                                     upstreamTrustConfiguration(),
+                                     authenticatedTokenContract(),
+                                     null,
+                                     authenticatedTokenVerificationConfiguration(),
+                                     identityMappingConfiguration(),
+                                     clock(),
+                                     "authenticatedTokenMintingConfiguration must not be null"),
+                             new NullCase("when authenticated token verification configuration is missing",
+                                     upstreamTrustConfiguration(),
+                                     authenticatedTokenContract(),
+                                     authenticatedTokenMintingConfiguration(),
+                                     null,
+                                     identityMappingConfiguration(),
+                                     clock(),
+                                     "authenticatedTokenVerificationConfiguration must not be null"),
+                             new NullCase("when identity mapping configuration is missing",
+                                     upstreamTrustConfiguration(),
+                                     authenticatedTokenContract(),
+                                     authenticatedTokenMintingConfiguration(),
+                                     authenticatedTokenVerificationConfiguration(),
+                                     null,
+                                     clock(),
+                                     "identityMappingConfiguration must not be null"),
+                             new NullCase("when clock is missing",
+                                     upstreamTrustConfiguration(),
+                                     authenticatedTokenContract(),
+                                     authenticatedTokenMintingConfiguration(),
+                                     authenticatedTokenVerificationConfiguration(),
+                                     identityMappingConfiguration(),
+                                     null,
+                                     "clock must not be null"))
+                     .map(Arguments::of);
+    }
+
     @Nested
     @DisplayName("as factory method")
     @TestInstance(PER_CLASS)
@@ -86,25 +174,12 @@ final class AuthenticatorConfigurationTest
 
         private Stream<Arguments> factoryCases()
         {
-            return Stream.of(new FactoryCase("keeps split token settings and explicit clock",
-                            upstreamTrustConfiguration(),
-                            authenticatedTokenContract(),
-                            authenticatedTokenMintingConfiguration(),
-                            authenticatedTokenVerificationConfiguration(),
-                            identityMappingConfiguration(),
-                            clock()))
-                         .map(Arguments::of);
+            return sharedFactoryCases();
         }
 
         private Stream<Arguments> minimalFactoryCases()
         {
-            return Stream.of(new MinimalFactoryCase("uses UTC clock when omitted",
-                            upstreamTrustConfiguration(),
-                            authenticatedTokenContract(),
-                            authenticatedTokenMintingConfiguration(),
-                            authenticatedTokenVerificationConfiguration(),
-                            identityMappingConfiguration()))
-                         .map(Arguments::of);
+            return sharedMinimalFactoryCases();
         }
     }
 
@@ -155,102 +230,41 @@ final class AuthenticatorConfigurationTest
                     .isEqualTo(ZoneOffset.UTC);
         }
 
-        private Stream<Arguments> factoryCases()
-        {
-            return Stream.of(new FactoryCase("keeps split token settings and explicit clock",
-                            upstreamTrustConfiguration(),
-                            authenticatedTokenContract(),
-                            authenticatedTokenMintingConfiguration(),
-                            authenticatedTokenVerificationConfiguration(),
-                            identityMappingConfiguration(),
-                            clock()))
-                         .map(Arguments::of);
-        }
-
-        private Stream<Arguments> minimalFactoryCases()
-        {
-            return Stream.of(new MinimalFactoryCase("uses UTC clock when omitted",
-                            upstreamTrustConfiguration(),
-                            authenticatedTokenContract(),
-                            authenticatedTokenMintingConfiguration(),
-                            authenticatedTokenVerificationConfiguration(),
-                            identityMappingConfiguration()))
-                         .map(Arguments::of);
-        }
-    }
-
-    @Nested
-    @DisplayName("as canonical constructor")
-    @TestInstance(PER_CLASS)
-    final class CanonicalConstructor
-    {
         @ParameterizedTest(name = "{0}")
         @MethodSource("nullCases")
-        void shouldRejectNullComponents(final NullCase input)
+        void shouldRejectNullComponentsWhenBuilding(final NullCase input)
         {
-            assertThatThrownBy(() -> new AuthenticatorConfiguration<>(input.upstreamTrustConfiguration(),
-                            input.authenticatedTokenContract(),
-                            input.authenticatedTokenMintingConfiguration(),
-                            input.authenticatedTokenVerificationConfiguration(),
-                            input.identityMappingConfiguration(),
-                            input.clock()))
+            assertThatThrownBy(() -> AuthenticatorConfiguration.<String, String>builder()
+                                                               .upstreamTrustConfiguration(
+                                                                       input.upstreamTrustConfiguration())
+                                                               .authenticatedTokenContract(
+                                                                       input.authenticatedTokenContract())
+                                                               .authenticatedTokenMintingConfiguration(
+                                                                       input.authenticatedTokenMintingConfiguration())
+                                                               .authenticatedTokenVerificationConfiguration(
+                                                                       input.authenticatedTokenVerificationConfiguration())
+                                                               .identityMappingConfiguration(
+                                                                       input.identityMappingConfiguration())
+                                                               .clock(input.clock())
+                                                               .build())
                     .as(input.description())
                     .isInstanceOf(NullPointerException.class)
                     .hasMessage(input.expectedMessage());
         }
 
+        private Stream<Arguments> factoryCases()
+        {
+            return sharedFactoryCases();
+        }
+
+        private Stream<Arguments> minimalFactoryCases()
+        {
+            return sharedMinimalFactoryCases();
+        }
+
         private Stream<Arguments> nullCases()
         {
-            return Stream.of(
-                            new NullCase("when upstream trust configuration is missing",
-                                    null,
-                                    authenticatedTokenContract(),
-                                    authenticatedTokenMintingConfiguration(),
-                                    authenticatedTokenVerificationConfiguration(),
-                                    identityMappingConfiguration(),
-                                    clock(),
-                                    "upstreamTrustConfiguration must not be null"),
-                            new NullCase("when authenticated token contract is missing",
-                                    upstreamTrustConfiguration(),
-                                    null,
-                                    authenticatedTokenMintingConfiguration(),
-                                    authenticatedTokenVerificationConfiguration(),
-                                    identityMappingConfiguration(),
-                                    clock(),
-                                    "authenticatedTokenContract must not be null"),
-                            new NullCase("when authenticated token minting configuration is missing",
-                                    upstreamTrustConfiguration(),
-                                    authenticatedTokenContract(),
-                                    null,
-                                    authenticatedTokenVerificationConfiguration(),
-                                    identityMappingConfiguration(),
-                                    clock(),
-                                    "authenticatedTokenMintingConfiguration must not be null"),
-                            new NullCase("when authenticated token verification configuration is missing",
-                                    upstreamTrustConfiguration(),
-                                    authenticatedTokenContract(),
-                                    authenticatedTokenMintingConfiguration(),
-                                    null,
-                                    identityMappingConfiguration(),
-                                    clock(),
-                                    "authenticatedTokenVerificationConfiguration must not be null"),
-                            new NullCase("when identity mapping configuration is missing",
-                                    upstreamTrustConfiguration(),
-                                    authenticatedTokenContract(),
-                                    authenticatedTokenMintingConfiguration(),
-                                    authenticatedTokenVerificationConfiguration(),
-                                    null,
-                                    clock(),
-                                    "identityMappingConfiguration must not be null"),
-                            new NullCase("when clock is missing",
-                                    upstreamTrustConfiguration(),
-                                    authenticatedTokenContract(),
-                                    authenticatedTokenMintingConfiguration(),
-                                    authenticatedTokenVerificationConfiguration(),
-                                    identityMappingConfiguration(),
-                                    null,
-                                    "clock must not be null"))
-                         .map(Arguments::of);
+            return sharedNullCases();
         }
     }
 
@@ -275,13 +289,30 @@ final class AuthenticatorConfigurationTest
                 TokenTrustPolicy.of(Duration.ZERO, true, Set.of("inventory"), Optional.of("argus")));
     }
 
-    private static IdentityMappingConfiguration<String, String> identityMappingConfiguration()
+    @Nested
+    @DisplayName("as canonical constructor")
+    @TestInstance(PER_CLASS)
+    final class CanonicalConstructor
     {
-        return IdentityMappingConfiguration.of(externalId -> Optional.of("local-" + externalId),
-                user -> user,
-                user -> Set.of("ROLE_" + user.toUpperCase()),
-                user -> (long) Objects.requireNonNull(user).length(),
-                subject -> (long) Objects.requireNonNull(subject).length());
+        @ParameterizedTest(name = "{0}")
+        @MethodSource("nullCases")
+        void shouldRejectNullComponents(final NullCase input)
+        {
+            assertThatThrownBy(() -> new AuthenticatorConfiguration<>(input.upstreamTrustConfiguration(),
+                            input.authenticatedTokenContract(),
+                            input.authenticatedTokenMintingConfiguration(),
+                            input.authenticatedTokenVerificationConfiguration(),
+                            input.identityMappingConfiguration(),
+                            input.clock()))
+                    .as(input.description())
+                    .isInstanceOf(NullPointerException.class)
+                    .hasMessage(input.expectedMessage());
+        }
+
+        private Stream<Arguments> nullCases()
+        {
+            return sharedNullCases();
+        }
     }
 
     private static Clock clock()

@@ -54,6 +54,8 @@ public record NormalizedTokenAuthenticatedIdentity(NormalizedToken token, String
 	@Override
 	public Optional<Instant> validFrom()
 	{
+		// TODO themis should expose an Optional<Instant> notBefore()/validFrom() accessor on NormalizedToken.
+		// return token.validFrom();
 		return Optional.empty();
 	}
 

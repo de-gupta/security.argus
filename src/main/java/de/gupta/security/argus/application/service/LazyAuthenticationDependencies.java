@@ -87,8 +87,10 @@ final class LazyAuthenticationDependencies<ExternalIdentity, User>
 
 		final TokenExchangeConfiguration<User> exchangeConfiguration = TokenExchangeConfiguration.of(
 				configuration.identityMappingConfiguration().externalIdentityAttributeName(),
-				externalIdentity -> configuration.identityMappingConfiguration().userResolver()
-				                                 .resolveUser(castExternalIdentity(externalIdentity)),
+				externalIdentity -> configuration.identityMappingConfiguration().externalIdentityAdapter()
+				                                 .adapt(externalIdentity)
+				                                 .flatMap(configuration.identityMappingConfiguration()
+				                                                       .userResolver()::resolveUser),
 				user -> configuration.identityMappingConfiguration().localSubjectResolver().resolveSubject(user),
 				user -> configuration.identityMappingConfiguration().roleResolver().resolveRoles(user),
 				user -> configuration.identityMappingConfiguration().userTokenVersionResolver().resolveVersion(user),
@@ -124,12 +126,6 @@ final class LazyAuthenticationDependencies<ExternalIdentity, User>
 				policy.requireSubject(),
 				policy.expectedAudiences(),
 				policy.expectedIssuer());
-	}
-
-	@SuppressWarnings("unchecked")
-	private ExternalIdentity castExternalIdentity(final String externalIdentity)
-	{
-		return (ExternalIdentity) externalIdentity;
 	}
 
 	private LazyAuthenticationDependencies(final AuthenticatorConfiguration<ExternalIdentity, User> configuration)

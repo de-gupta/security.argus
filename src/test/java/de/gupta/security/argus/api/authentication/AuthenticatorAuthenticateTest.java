@@ -1,5 +1,6 @@
 package de.gupta.security.argus.api.authentication;
 
+import de.gupta.security.argus.api.identity.ExternalIdentityAdapter;
 import de.gupta.security.argus.api.identity.IdentityMappingConfiguration;
 import de.gupta.security.argus.api.token.AuthenticatedTokenContract;
 import de.gupta.security.argus.api.token.AuthenticatedTokenMintingConfiguration;
@@ -53,8 +54,8 @@ final class AuthenticatorAuthenticateTest
 	private static final String DIFFERENT_UPSTREAM_SECRET = "other-upstream-secret-value-long-enough";
 	private static final String INTERNAL_SECRET = "internal-secret-value-that-is-long-enough";
 
-	private static AuthenticatorConfiguration<String, String> baseConfiguration(
-			final IdentityMappingConfiguration<String, String> identityMappingConfiguration)
+	private static <ExternalIdentity> AuthenticatorConfiguration<ExternalIdentity, String> baseConfiguration(
+			final IdentityMappingConfiguration<ExternalIdentity, String> identityMappingConfiguration)
 	{
 		return baseConfiguration(identityMappingConfiguration,
 				AuthenticatedTokenVerificationConfiguration.of(TokenTrustPolicy.of(Duration.ZERO,
@@ -63,11 +64,11 @@ final class AuthenticatorAuthenticateTest
 						Optional.of(INTERNAL_ISSUER))));
 	}
 
-	private static AuthenticatorConfiguration<String, String> baseConfiguration(
-			final IdentityMappingConfiguration<String, String> identityMappingConfiguration,
+	private static <ExternalIdentity> AuthenticatorConfiguration<ExternalIdentity, String> baseConfiguration(
+			final IdentityMappingConfiguration<ExternalIdentity, String> identityMappingConfiguration,
 			final AuthenticatedTokenVerificationConfiguration authenticatedTokenVerificationConfiguration)
 	{
-		return AuthenticatorConfiguration.<String, String>builder()
+		return AuthenticatorConfiguration.<ExternalIdentity, String>builder()
 		                                 .upstreamTrustConfiguration(UpstreamTrustConfiguration.Hmac.of(
 												 TokenTrustPolicy.of(Duration.ZERO, true, Set.of(AUDIENCE),
 						                                 Optional.of(UPSTREAM_ISSUER)),
@@ -114,6 +115,15 @@ final class AuthenticatorAuthenticateTest
 		}
 	}
 
+	private record AdaptedSuccessCase(String description, Authenticator authenticator, String token)
+	{
+		@Override
+		public String toString()
+		{
+			return description;
+		}
+	}
+
 	private record FailureCase(String description, Authenticator authenticator, String token)
 	{
 		@Override
@@ -133,6 +143,10 @@ final class AuthenticatorAuthenticateTest
 		{
 			return description;
 		}
+	}
+
+	private record ExternalIdentity(String value)
+	{
 	}
 
 	@Nested
@@ -174,7 +188,8 @@ final class AuthenticatorAuthenticateTest
 		private Stream<Arguments> cases()
 		{
 			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(
-					IdentityMappingConfiguration.of(externalIdentity -> Optional.of("user-123"),
+					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
+							externalIdentity -> Optional.of("user-123"),
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER", "ROLE_ADMIN"),
 							_ -> 7L,
@@ -209,7 +224,8 @@ final class AuthenticatorAuthenticateTest
 		private Stream<Arguments> cases()
 		{
 			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(
-					IdentityMappingConfiguration.of(externalIdentity -> Optional.of("user-123"),
+					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
+							externalIdentity -> Optional.of("user-123"),
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER"),
 							_ -> 7L,
@@ -247,19 +263,22 @@ final class AuthenticatorAuthenticateTest
 		{
 			final Authenticator missingIdentityAuthenticator = AuthenticatorFactory.create(baseConfiguration(
 					IdentityMappingConfiguration.of("email",
+							ExternalIdentityAdapter.stringIdentity(),
 							externalIdentity -> Optional.of("user-123"),
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER"),
 							_ -> 7L,
 							_ -> 7L)));
 			final Authenticator missingUserAuthenticator = AuthenticatorFactory.create(baseConfiguration(
-					IdentityMappingConfiguration.of(externalIdentity -> Optional.<String>empty(),
+					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
+							externalIdentity -> Optional.<String>empty(),
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER"),
 							_ -> 7L,
 							_ -> 7L)));
 			final Authenticator missingSubjectAuthenticator = AuthenticatorFactory.create(baseConfiguration(
-					IdentityMappingConfiguration.of(externalIdentity -> Optional.of("user-123"),
+					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
+							externalIdentity -> Optional.of("user-123"),
 							_ -> " ",
 							_ -> Set.of("ROLE_USER"),
 							_ -> 7L,
@@ -278,6 +297,42 @@ final class AuthenticatorAuthenticateTest
 										 missingSubjectAuthenticator,
 										 upstreamToken("external-123", Map.of()),
 										 IdentityNotResolvedReason.MISSING_LOCAL_SUBJECT))
+			             .map(Arguments::of);
+		}
+	}
+
+	@Nested
+	@DisplayName("as adapted external identity")
+	@TestInstance(PER_CLASS)
+	final class AdaptedExternalIdentity
+	{
+		@ParameterizedTest(name = "{0}")
+		@MethodSource("cases")
+		void shouldAdaptExternalIdentityBeforeResolvingUser(final AdaptedSuccessCase input)
+		{
+			final AuthenticationResult result = input.authenticator().authenticate(input.token());
+
+			assertThat(result)
+					.as(input.description())
+					.isInstanceOf(AuthenticationSuccess.class);
+			assertThat(((AuthenticationSuccess) result).identity().subject())
+					.as(input.description())
+					.isEqualTo("local-user-123");
+		}
+
+		private Stream<Arguments> cases()
+		{
+			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(
+					IdentityMappingConfiguration.of(rawIdentity -> Optional.of(new ExternalIdentity(rawIdentity)),
+							externalIdentity -> Optional.of(externalIdentity.value().replace("external", "user")),
+							user -> "local-" + user,
+							_ -> Set.of("ROLE_USER"),
+							_ -> 7L,
+							_ -> 7L)));
+
+			return Stream.of(new AdaptedSuccessCase("when an adapter transforms the raw external identity",
+								 authenticator,
+								 upstreamToken("external-123", Map.of())))
 			             .map(Arguments::of);
 		}
 	}
@@ -305,7 +360,8 @@ final class AuthenticatorAuthenticateTest
 		{
 			final AtomicLong currentVersion = new AtomicLong(8L);
 			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(
-					IdentityMappingConfiguration.of(externalIdentity -> Optional.of("user-123"),
+					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
+							externalIdentity -> Optional.of("user-123"),
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER"),
 							_ -> 7L,
@@ -340,7 +396,8 @@ final class AuthenticatorAuthenticateTest
 		private Stream<Arguments> cases()
 		{
 			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(
-					IdentityMappingConfiguration.of(externalIdentity -> Optional.of("user-123"),
+					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
+							externalIdentity -> Optional.of("user-123"),
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER"),
 							_ -> 7L,

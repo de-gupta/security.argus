@@ -5,6 +5,7 @@ import de.gupta.security.argus.utility.ValidationUtility;
 import java.util.Objects;
 
 public record IdentityMappingConfiguration<ExternalIdentity, User>(String externalIdentityAttributeName,
+                                                                   ExternalIdentityAdapter<ExternalIdentity> externalIdentityAdapter,
                                                                    UserResolver<ExternalIdentity, User> userResolver,
                                                                    LocalSubjectResolver<User> localSubjectResolver,
                                                                    RoleResolver<User> roleResolver,
@@ -13,6 +14,7 @@ public record IdentityMappingConfiguration<ExternalIdentity, User>(String extern
 {
     public static <ExternalIdentity, User> IdentityMappingConfiguration<ExternalIdentity, User> of(
             final String externalIdentityAttributeName,
+            final ExternalIdentityAdapter<ExternalIdentity> externalIdentityAdapter,
             final UserResolver<ExternalIdentity, User> userResolver,
             final LocalSubjectResolver<User> localSubjectResolver,
             final RoleResolver<User> roleResolver,
@@ -20,6 +22,7 @@ public record IdentityMappingConfiguration<ExternalIdentity, User>(String extern
             final AuthenticatedSubjectVersionResolver authenticatedSubjectVersionResolver)
     {
         return new IdentityMappingConfiguration<>(externalIdentityAttributeName,
+                externalIdentityAdapter,
                 userResolver,
                 localSubjectResolver,
                 roleResolver,
@@ -28,6 +31,7 @@ public record IdentityMappingConfiguration<ExternalIdentity, User>(String extern
     }
 
     public static <ExternalIdentity, User> IdentityMappingConfiguration<ExternalIdentity, User> of(
+            final ExternalIdentityAdapter<ExternalIdentity> externalIdentityAdapter,
             final UserResolver<ExternalIdentity, User> userResolver,
             final LocalSubjectResolver<User> localSubjectResolver,
             final RoleResolver<User> roleResolver,
@@ -35,6 +39,7 @@ public record IdentityMappingConfiguration<ExternalIdentity, User>(String extern
             final AuthenticatedSubjectVersionResolver authenticatedSubjectVersionResolver)
     {
         return of("sub",
+                externalIdentityAdapter,
                 userResolver,
                 localSubjectResolver,
                 roleResolver,
@@ -46,6 +51,8 @@ public record IdentityMappingConfiguration<ExternalIdentity, User>(String extern
     {
         externalIdentityAttributeName = ValidationUtility.requireNonBlank(externalIdentityAttributeName,
                 "externalIdentityAttributeName must not be blank");
+        externalIdentityAdapter = Objects.requireNonNull(externalIdentityAdapter,
+                "externalIdentityAdapter must not be null");
         userResolver = Objects.requireNonNull(userResolver, "userResolver must not be null");
         localSubjectResolver = Objects.requireNonNull(localSubjectResolver, "localSubjectResolver must not be null");
         roleResolver = Objects.requireNonNull(roleResolver, "roleResolver must not be null");

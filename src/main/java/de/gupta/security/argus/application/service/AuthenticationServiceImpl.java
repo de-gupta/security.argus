@@ -9,12 +9,11 @@ import de.gupta.security.argus.domain.model.identity.NormalizedTokenAuthenticate
 import de.gupta.security.augustus.domain.model.Token;
 import de.gupta.security.augustus.domain.model.TokenVersionVerificationFailure;
 import de.gupta.security.augustus.domain.model.TokenVersionVerificationResult;
+import de.gupta.security.augustus.domain.model.TokenVersionVerificationSuccess;
 import de.gupta.security.hermes.domain.model.ExchangeFailure;
-import de.gupta.security.hermes.domain.model.ExchangeResult;
 import de.gupta.security.hermes.domain.model.ExchangeSuccess;
 import de.gupta.security.themis.domain.model.NormalizedToken;
 import de.gupta.security.themis.domain.model.VerificationFailure;
-import de.gupta.security.themis.domain.model.VerificationResult;
 import de.gupta.security.themis.domain.model.VerificationSuccess;
 
 import java.util.List;
@@ -46,19 +45,20 @@ final class AuthenticationServiceImpl<ExternalIdentity, User> implements Authent
 
     private AuthenticationResult authenticateUnchecked(final String token)
     {
-        final ExchangeResult exchangeResult = dependencies.summon().tokenExchangeService().exchange(token);
-        return exchangeResult instanceof ExchangeFailure failure
-                ? resultMapper.exchangeFailure(failure)
-                : authenticateIssuedToken(((ExchangeSuccess) exchangeResult).token().token());
+        return switch (dependencies.summon().tokenExchangeService().exchange(token))
+        {
+            case ExchangeFailure failure -> resultMapper.exchangeFailure(failure);
+            case ExchangeSuccess success -> authenticateIssuedToken(success.token().token());
+        };
     }
 
     private AuthenticationResult authenticateIssuedToken(final String issuedToken)
     {
-        final VerificationResult verificationResult =
-                dependencies.summon().authenticatedTokenVerifier().verify(issuedToken);
-        return verificationResult instanceof VerificationFailure failure
-                ? resultMapper.internalCredentialFailure(failure)
-                : authenticateVerifiedInternalToken(((VerificationSuccess) verificationResult).token());
+        return switch (dependencies.summon().authenticatedTokenVerifier().verify(issuedToken))
+        {
+            case VerificationFailure failure -> resultMapper.internalCredentialFailure(failure);
+            case VerificationSuccess success -> authenticateVerifiedInternalToken(success.token());
+        };
     }
 
     private AuthenticationResult authenticateVerifiedInternalToken(final NormalizedToken token)
@@ -77,9 +77,11 @@ final class AuthenticationServiceImpl<ExternalIdentity, User> implements Authent
                                                                                            new SubjectVersionToken(
                                                                                                    token.subject(),
                                                                                                    version));
-        return currentnessResult instanceof TokenVersionVerificationFailure<Long> failure
-                ? resultMapper.currentnessFailure(failure)
-                : authenticateSuccess(token);
+        return switch (currentnessResult)
+        {
+            case TokenVersionVerificationFailure<Long> failure -> resultMapper.currentnessFailure(failure);
+            case TokenVersionVerificationSuccess<Long> _ -> authenticateSuccess(token);
+        };
     }
 
     private AuthenticationResult authenticateSuccess(final NormalizedToken token)
