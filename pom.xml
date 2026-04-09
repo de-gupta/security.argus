@@ -17,11 +17,11 @@
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <themis.version>2.1.0</themis.version>
-        <hermes.version>1.0.0</hermes.version>
-        <augustus.version>1.0.0</augustus.version>
+        <themis.version>2.2.0</themis.version>
+        <hermes.version>1.1.0</hermes.version>
+        <augustus.version>1.0.1</augustus.version>
 
-        <aletheia.version>0.4.2</aletheia.version>
+        <aletheia.version>0.5.0</aletheia.version>
         <athena.version>0.4.0</athena.version>
         <jjwt.version>0.13.0</jjwt.version>
 

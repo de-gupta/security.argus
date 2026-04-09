@@ -3,22 +3,15 @@ package de.gupta.security.argus.domain.model.identity;
 import de.gupta.security.themis.domain.model.NormalizedToken;
 
 import java.time.Instant;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
-public record NormalizedTokenAuthenticatedIdentity(NormalizedToken token, String roleClaimName)
+public record NormalizedTokenAuthenticatedIdentity(NormalizedToken token)
 		implements AuthenticatedIdentity
 {
-	public static AuthenticatedIdentity of(final NormalizedToken token, final String roleClaimName)
+	public static AuthenticatedIdentity of(final NormalizedToken token)
 	{
-		return new NormalizedTokenAuthenticatedIdentity(token, roleClaimName);
-	}
-
-	public NormalizedTokenAuthenticatedIdentity
-	{
-		Objects.requireNonNull(token, "token must not be null");
-		Objects.requireNonNull(roleClaimName, "roleClaimName must not be null");
+		return new NormalizedTokenAuthenticatedIdentity(token);
 	}
 
 	@Override
@@ -54,14 +47,12 @@ public record NormalizedTokenAuthenticatedIdentity(NormalizedToken token, String
 	@Override
 	public Optional<Instant> validFrom()
 	{
-		// TODO themis should expose an Optional<Instant> notBefore()/validFrom() accessor on NormalizedToken.
-		// return token.validFrom();
-		return Optional.empty();
+		return token.notBefore();
 	}
 
 	@Override
 	public Set<String> roles()
 	{
-		return token.stringListClaim(roleClaimName);
+		return token.roles();
 	}
 }

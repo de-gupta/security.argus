@@ -86,8 +86,7 @@ final class AuthenticationServiceImpl<ExternalIdentity, User> implements Authent
 
     private AuthenticationResult authenticateSuccess(final NormalizedToken token)
     {
-        return AuthenticationSuccess.of(NormalizedTokenAuthenticatedIdentity.of(token,
-                configuration.authenticatedTokenContract().roleAttributeName()));
+        return AuthenticationSuccess.of(NormalizedTokenAuthenticatedIdentity.of(token));
     }
 
     private Optional<Long> resolveVersion(final NormalizedToken token)
