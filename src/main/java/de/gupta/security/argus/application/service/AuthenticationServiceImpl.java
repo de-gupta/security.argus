@@ -91,7 +91,7 @@ final class AuthenticationServiceImpl<ExternalIdentity, User> implements Authent
 
     private Optional<Long> resolveVersion(final NormalizedToken token)
     {
-        return token.longClaim(configuration.authenticatedTokenContract().versionAttributeName());
+        return token.version().map(Number::longValue);
     }
 
     private List<Portent<AuthenticationResult>> exceptional()
