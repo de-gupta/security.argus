@@ -34,7 +34,7 @@ final class AuthenticationFailureDetailsTest
         @MethodSource("cases")
         void shouldWrapStringsInFailureDetails(final StringOverloadCase input)
         {
-            assertThat(detailsOf(input.failure()))
+            assertThat(input.failure().details())
                     .as(input.description())
                     .contains(FailureDetails.of(input.message()));
         }
@@ -69,7 +69,7 @@ final class AuthenticationFailureDetailsTest
         @MethodSource("cases")
         void shouldStoreExplicitFailureDetails(final ExplicitDetailsCase input)
         {
-            assertThat(detailsOf(input.failure()))
+            assertThat(input.failure().details())
                     .as(input.description())
                     .contains(input.details());
         }
@@ -106,7 +106,7 @@ final class AuthenticationFailureDetailsTest
         @MethodSource("cases")
         void shouldLeaveDetailsEmpty(final EmptyDetailsCase input)
         {
-            assertThat(detailsOf(input.failure()))
+            assertThat(input.failure().details())
                     .as(input.description())
                     .isEqualTo(Optional.empty());
         }
@@ -124,17 +124,6 @@ final class AuthenticationFailureDetailsTest
                                     AuthenticationUnavailable.of(AuthenticationUnavailableReason.SERVICE_UNAVAILABLE)))
                          .map(Arguments::of);
         }
-    }
-
-    private Optional<FailureDetails> detailsOf(final AuthenticationFailure failure)
-    {
-        return switch (failure)
-        {
-            case InvalidCredential invalidCredential -> invalidCredential.details();
-            case IdentityNotResolved identityNotResolved -> identityNotResolved.details();
-            case AuthenticationNotCurrent authenticationNotCurrent -> authenticationNotCurrent.details();
-            case AuthenticationUnavailable authenticationUnavailable -> authenticationUnavailable.details();
-        };
     }
 
     private record StringOverloadCase(String description, AuthenticationFailure failure, String message)
