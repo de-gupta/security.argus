@@ -18,6 +18,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <security.bom.version>0.1.2</security.bom.version>
+        <security.dependencies.bom.version>0.1.1</security.dependencies.bom.version>
 
         <maven.release.plugin.version>3.1.1</maven.release.plugin.version>
         <maven.gpg.plugin.version>3.2.8</maven.gpg.plugin.version>
@@ -34,6 +35,13 @@
                 <groupId>io.github.de-gupta</groupId>
                 <artifactId>security.bom</artifactId>
                 <version>${security.bom.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.github.de-gupta</groupId>
+                <artifactId>security.dependencies.bom</artifactId>
+                <version>${security.dependencies.bom.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
