@@ -22,40 +22,10 @@ import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 @TestInstance(PER_CLASS)
 final class TokenTrustPolicyTest
 {
-    @Nested
-    @DisplayName("as factory method")
-    @TestInstance(PER_CLASS)
-    final class FactoryMethod
+    @FunctionalInterface
+    private interface PolicyFactory
     {
-        @Test
-        void shouldApplyDefaultPolicyValues()
-        {
-            final TokenTrustPolicy policy = TokenTrustPolicy.of(Duration.ZERO);
-
-            assertThat(policy.requireSubject())
-                    .as("does not require a subject by default")
-                    .isFalse();
-            assertThat(policy.expectedAudiences())
-                    .as("does not require audiences by default")
-                    .isEmpty();
-            assertThat(policy.expectedIssuer())
-                    .as("does not require an issuer by default")
-                    .isEmpty();
-        }
-
-        @Test
-        void shouldCopyExpectedAudiencesDefensively()
-        {
-            final Set<String> audiences = new HashSet<>(Set.of("inventory"));
-
-            final TokenTrustPolicy policy = TokenTrustPolicy.of(Duration.ZERO, true, audiences, Optional.of("argus"));
-
-            audiences.add("reporting");
-
-            assertThat(policy.expectedAudiences())
-                    .as("keeps expected audiences stable after caller mutation")
-                    .containsExactly("inventory");
-        }
+        TokenTrustPolicy create();
     }
 
     @Nested
@@ -153,9 +123,92 @@ final class TokenTrustPolicyTest
         }
     }
 
+    private record ExplicitFactoryCase(String description, PolicyFactory factory, TokenTrustPolicy expectedPolicy)
+    {
+        @Override
+        public String toString()
+        {
+            return description;
+        }
+    }
+
     @FunctionalInterface
     private interface ThrowingCall
     {
         void invoke();
+    }
+
+    @Nested
+    @DisplayName("as factory method")
+    @TestInstance(PER_CLASS)
+    final class FactoryMethod
+    {
+        @ParameterizedTest(name = "{0}")
+        @MethodSource("explicitFactoryCases")
+        void shouldCreateViaAllFactoryOverloads(final ExplicitFactoryCase input)
+        {
+            final TokenTrustPolicy policy = input.factory().create();
+
+            assertThat(policy.clockSkew())
+                    .as(input.description())
+                    .isEqualTo(input.expectedPolicy().clockSkew());
+            assertThat(policy.requireSubject())
+                    .as(input.description())
+                    .isEqualTo(input.expectedPolicy().requireSubject());
+            assertThat(policy.expectedAudiences())
+                    .as(input.description())
+                    .isEqualTo(input.expectedPolicy().expectedAudiences());
+            assertThat(policy.expectedIssuer())
+                    .as(input.description())
+                    .isEqualTo(input.expectedPolicy().expectedIssuer());
+        }
+
+        @Test
+        void shouldApplyDefaultPolicyValues()
+        {
+            final TokenTrustPolicy policy = TokenTrustPolicy.of(Duration.ZERO);
+
+            assertThat(policy.requireSubject())
+                    .as("does not require a subject by default")
+                    .isFalse();
+            assertThat(policy.expectedAudiences())
+                    .as("does not require audiences by default")
+                    .isEmpty();
+            assertThat(policy.expectedIssuer())
+                    .as("does not require an issuer by default")
+                    .isEmpty();
+        }
+
+        @Test
+        void shouldCopyExpectedAudiencesDefensively()
+        {
+            final Set<String> audiences = new HashSet<>(Set.of("inventory"));
+
+            final TokenTrustPolicy policy = TokenTrustPolicy.of(Duration.ZERO, true, audiences, Optional.of("argus"));
+
+            audiences.add("reporting");
+
+            assertThat(policy.expectedAudiences())
+                    .as("keeps expected audiences stable after caller mutation")
+                    .containsExactly("inventory");
+        }
+
+        private Stream<Arguments> explicitFactoryCases()
+        {
+            return Stream.of(
+                                 new ExplicitFactoryCase("when issuer-free overload is used",
+                                         () -> TokenTrustPolicy.of(Duration.ofSeconds(5), true, Set.of("inventory")),
+                                         TokenTrustPolicy.of(Duration.ofSeconds(5),
+                                                 true,
+                                                 Set.of("inventory"),
+                                                 Optional.empty())),
+                                 new ExplicitFactoryCase("when subject-only overload is used",
+                                         () -> TokenTrustPolicy.of(Duration.ofSeconds(5), true),
+                                         TokenTrustPolicy.of(Duration.ofSeconds(5),
+                                                 true,
+                                                 Set.of(),
+                                                 Optional.empty())))
+                         .map(Arguments::of);
+        }
     }
 }

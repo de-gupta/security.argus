@@ -28,6 +28,14 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.nio.charset.StandardCharsets;
+import java.security.Key;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.interfaces.ECPrivateKey;
+import java.security.interfaces.ECPublicKey;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -55,9 +63,11 @@ final class AuthenticatorAuthenticateTest
 	private static final String INTERNAL_SECRET = "internal-secret-value-that-is-long-enough";
 
 	private static <ExternalIdentity> AuthenticatorConfiguration<ExternalIdentity, String> baseConfiguration(
+			final CryptoMaterial cryptoMaterial,
 			final IdentityMappingConfiguration<ExternalIdentity, String> identityMappingConfiguration)
 	{
-		return baseConfiguration(identityMappingConfiguration,
+		return baseConfiguration(cryptoMaterial,
+				identityMappingConfiguration,
 				AuthenticatedTokenVerificationConfiguration.of(TokenTrustPolicy.of(Duration.ZERO,
 						true,
 						Set.of(AUDIENCE),
@@ -65,30 +75,22 @@ final class AuthenticatorAuthenticateTest
 	}
 
 	private static <ExternalIdentity> AuthenticatorConfiguration<ExternalIdentity, String> baseConfiguration(
+			final CryptoMaterial cryptoMaterial,
 			final IdentityMappingConfiguration<ExternalIdentity, String> identityMappingConfiguration,
 			final AuthenticatedTokenVerificationConfiguration authenticatedTokenVerificationConfiguration)
 	{
 		return AuthenticatorConfiguration.<ExternalIdentity, String>builder()
-		                                 .upstreamTrustConfiguration(UpstreamTrustConfiguration.Hmac.of(
-												 TokenTrustPolicy.of(Duration.ZERO, true, Set.of(AUDIENCE),
-						                                 Optional.of(UPSTREAM_ISSUER)),
-												 UPSTREAM_SECRET))
+		                                 .upstreamTrustConfiguration(cryptoMaterial.upstreamTrustConfiguration())
 		                                 .authenticatedTokenContract(AuthenticatedTokenContract.of(INTERNAL_ISSUER,
 												 Set.of(AUDIENCE),
 												 Duration.ofMinutes(15)))
 		                                 .authenticatedTokenMintingConfiguration(
-												 AuthenticatedTokenMintingConfiguration.of(
-						                                 TokenSignerConfiguration.Hmac.of(INTERNAL_SECRET)))
+												 cryptoMaterial.authenticatedTokenMintingConfiguration())
 		                                 .authenticatedTokenVerificationConfiguration(
-				                                 authenticatedTokenVerificationConfiguration)
+												 authenticatedTokenVerificationConfiguration)
 		                                 .identityMappingConfiguration(identityMappingConfiguration)
 		                                 .clock(CLOCK)
 		                                 .build();
-	}
-
-	private static String upstreamToken(final String subject, final Map<String, Object> claims)
-	{
-		return signedUpstreamToken(subject, claims, UPSTREAM_SECRET);
 	}
 
 	private static String signedUpstreamToken(final String subject,
@@ -104,6 +106,78 @@ final class AuthenticatorAuthenticateTest
 		                        .signWith(Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8)));
 		builder.audience().add(Set.of(AUDIENCE)).and();
 		return builder.compact();
+	}
+
+	private static String signedUpstreamToken(final String subject,
+	                                          final Map<String, Object> claims,
+	                                          final String issuer,
+	                                          final Key signingKey)
+	{
+		final var builder = Jwts.builder()
+		                        .subject(subject)
+		                        .issuer(issuer)
+		                        .issuedAt(Date.from(CLOCK.instant()))
+		                        .expiration(Date.from(CLOCK.instant().plus(Duration.ofMinutes(30))))
+		                        .claims(claims)
+		                        .signWith(signingKey);
+		builder.audience().add(Set.of(AUDIENCE)).and();
+		return builder.compact();
+	}
+
+	private static CryptoMaterial hmacMaterial()
+	{
+		return new CryptoMaterial("HMAC",
+				UpstreamTrustConfiguration.Hmac.of(TokenTrustPolicy.of(Duration.ZERO,
+								true,
+								Set.of(AUDIENCE),
+								Optional.of(UPSTREAM_ISSUER)),
+						UPSTREAM_SECRET),
+				AuthenticatedTokenMintingConfiguration.of(TokenSignerConfiguration.Hmac.of(INTERNAL_SECRET)),
+				(subject, claims) -> signedUpstreamToken(subject, claims, UPSTREAM_SECRET));
+	}
+
+	private static CryptoMaterial rsaMaterial()
+	{
+		final KeyPair keyPair = generateKeyPair("RSA", 2048);
+		final RSAPrivateKey privateKey = (RSAPrivateKey) keyPair.getPrivate();
+		final RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
+		return new CryptoMaterial("RSA",
+				UpstreamTrustConfiguration.Rsa.of(TokenTrustPolicy.of(Duration.ZERO,
+								true,
+								Set.of(AUDIENCE),
+								Optional.of(UPSTREAM_ISSUER)),
+						publicKey),
+				AuthenticatedTokenMintingConfiguration.of(TokenSignerConfiguration.Rsa.of(privateKey, publicKey)),
+				(subject, claims) -> signedUpstreamToken(subject, claims, UPSTREAM_ISSUER, privateKey));
+	}
+
+	private static CryptoMaterial ecMaterial()
+	{
+		final KeyPair keyPair = generateKeyPair("EC", 256);
+		final ECPrivateKey privateKey = (ECPrivateKey) keyPair.getPrivate();
+		final ECPublicKey publicKey = (ECPublicKey) keyPair.getPublic();
+		return new CryptoMaterial("EC",
+				UpstreamTrustConfiguration.Ec.of(TokenTrustPolicy.of(Duration.ZERO,
+								true,
+								Set.of(AUDIENCE),
+								Optional.of(UPSTREAM_ISSUER)),
+						publicKey),
+				AuthenticatedTokenMintingConfiguration.of(TokenSignerConfiguration.Ec.of(privateKey, publicKey)),
+				(subject, claims) -> signedUpstreamToken(subject, claims, UPSTREAM_ISSUER, privateKey));
+	}
+
+	private static KeyPair generateKeyPair(final String algorithm, final int keySize)
+	{
+		try
+		{
+			final KeyPairGenerator generator = KeyPairGenerator.getInstance(algorithm);
+			generator.initialize(keySize);
+			return generator.generateKeyPair();
+		}
+		catch (NoSuchAlgorithmException exception)
+		{
+			throw new IllegalStateException(exception);
+		}
 	}
 
 	private record SuccessCase(String description, Authenticator authenticator, String token)
@@ -145,8 +219,34 @@ final class AuthenticatorAuthenticateTest
 		}
 	}
 
+	@FunctionalInterface
+	private interface UpstreamTokenFactory
+	{
+		String create(String subject, Map<String, Object> claims);
+	}
+
 	private record ExternalIdentity(String value)
 	{
+	}
+
+	private record RuntimeFailureCase(String description, Authenticator authenticator, String token)
+	{
+		@Override
+		public String toString()
+		{
+			return description;
+		}
+	}
+
+	private record CryptoMaterial(String description,
+	                              UpstreamTrustConfiguration upstreamTrustConfiguration,
+	                              AuthenticatedTokenMintingConfiguration authenticatedTokenMintingConfiguration,
+	                              UpstreamTokenFactory upstreamTokenFactory)
+	{
+		String upstreamToken(final String subject, final Map<String, Object> claims)
+		{
+			return upstreamTokenFactory.create(subject, claims);
+		}
 	}
 
 	@Nested
@@ -183,21 +283,25 @@ final class AuthenticatorAuthenticateTest
 			assertThat(success.identity().expiresAt())
 					.as(input.description())
 					.contains(CLOCK.instant().plus(Duration.ofMinutes(15)));
+			assertThat(success.identity().validFrom())
+					.as(input.description())
+					.isEmpty();
 		}
 
 		private Stream<Arguments> cases()
 		{
-			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(
-					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
-							externalIdentity -> Optional.of("user-123"),
-							user -> "local-" + user,
-							_ -> Set.of("ROLE_USER", "ROLE_ADMIN"),
-							_ -> 7L,
-							_ -> 7L)));
-
-			return Stream.of(new SuccessCase("when upstream token resolves and stays current",
-								 authenticator,
-								 upstreamToken("external-123", Map.of())))
+			return Stream.of(hmacMaterial(), rsaMaterial(), ecMaterial())
+			             .map(cryptoMaterial -> new SuccessCase(
+								 "when " + cryptoMaterial.description() + " exchange resolves and stays current",
+								 AuthenticatorFactory.create(baseConfiguration(
+										 cryptoMaterial,
+										 IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
+												 externalIdentity -> Optional.of("user-123"),
+												 user -> "local-" + user,
+												 _ -> Set.of("ROLE_USER", "ROLE_ADMIN"),
+												 _ -> 7L,
+												 _ -> 7L))),
+								 cryptoMaterial.upstreamToken("external-123", Map.of())))
 			             .map(Arguments::of);
 		}
 	}
@@ -224,6 +328,7 @@ final class AuthenticatorAuthenticateTest
 		private Stream<Arguments> cases()
 		{
 			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(
+					hmacMaterial(),
 					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
 							externalIdentity -> Optional.of("user-123"),
 							user -> "local-" + user,
@@ -262,6 +367,7 @@ final class AuthenticatorAuthenticateTest
 		private Stream<Arguments> cases()
 		{
 			final Authenticator missingIdentityAuthenticator = AuthenticatorFactory.create(baseConfiguration(
+					hmacMaterial(),
 					IdentityMappingConfiguration.of("email",
 							ExternalIdentityAdapter.stringIdentity(),
 							externalIdentity -> Optional.of("user-123"),
@@ -270,6 +376,7 @@ final class AuthenticatorAuthenticateTest
 							_ -> 7L,
 							_ -> 7L)));
 			final Authenticator missingUserAuthenticator = AuthenticatorFactory.create(baseConfiguration(
+					hmacMaterial(),
 					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
 							externalIdentity -> Optional.<String>empty(),
 							user -> "local-" + user,
@@ -277,6 +384,7 @@ final class AuthenticatorAuthenticateTest
 							_ -> 7L,
 							_ -> 7L)));
 			final Authenticator missingSubjectAuthenticator = AuthenticatorFactory.create(baseConfiguration(
+					hmacMaterial(),
 					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
 							externalIdentity -> Optional.of("user-123"),
 							_ -> " ",
@@ -287,15 +395,15 @@ final class AuthenticatorAuthenticateTest
 			return Stream.of(
 								 new IdentityFailureCase("when configured external identity claim is missing",
 										 missingIdentityAuthenticator,
-										 upstreamToken("external-123", Map.of()),
+										 hmacMaterial().upstreamToken("external-123", Map.of()),
 										 IdentityNotResolvedReason.MISSING_EXTERNAL_IDENTITY),
 								 new IdentityFailureCase("when no local user can be resolved",
 										 missingUserAuthenticator,
-										 upstreamToken("external-123", Map.of()),
+										 hmacMaterial().upstreamToken("external-123", Map.of()),
 										 IdentityNotResolvedReason.USER_NOT_FOUND),
 								 new IdentityFailureCase("when no stable local subject can be resolved",
 										 missingSubjectAuthenticator,
-										 upstreamToken("external-123", Map.of()),
+										 hmacMaterial().upstreamToken("external-123", Map.of()),
 										 IdentityNotResolvedReason.MISSING_LOCAL_SUBJECT))
 			             .map(Arguments::of);
 		}
@@ -323,6 +431,7 @@ final class AuthenticatorAuthenticateTest
 		private Stream<Arguments> cases()
 		{
 			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(
+					hmacMaterial(),
 					IdentityMappingConfiguration.of(rawIdentity -> Optional.of(new ExternalIdentity(rawIdentity)),
 							externalIdentity -> Optional.of(externalIdentity.value().replace("external", "user")),
 							user -> "local-" + user,
@@ -332,7 +441,7 @@ final class AuthenticatorAuthenticateTest
 
 			return Stream.of(new AdaptedSuccessCase("when an adapter transforms the raw external identity",
 								 authenticator,
-								 upstreamToken("external-123", Map.of())))
+								 hmacMaterial().upstreamToken("external-123", Map.of())))
 			             .map(Arguments::of);
 		}
 	}
@@ -360,6 +469,7 @@ final class AuthenticatorAuthenticateTest
 		{
 			final AtomicLong currentVersion = new AtomicLong(8L);
 			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(
+					hmacMaterial(),
 					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
 							externalIdentity -> Optional.of("user-123"),
 							user -> "local-" + user,
@@ -369,7 +479,7 @@ final class AuthenticatorAuthenticateTest
 
 			return Stream.of(new FailureCase("when token version is outdated immediately after minting",
 								 authenticator,
-								 upstreamToken("external-123", Map.of())))
+								 hmacMaterial().upstreamToken("external-123", Map.of())))
 			             .map(Arguments::of);
 		}
 	}
@@ -396,6 +506,7 @@ final class AuthenticatorAuthenticateTest
 		private Stream<Arguments> cases()
 		{
 			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(
+					hmacMaterial(),
 					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
 							externalIdentity -> Optional.of("user-123"),
 							user -> "local-" + user,
@@ -407,7 +518,47 @@ final class AuthenticatorAuthenticateTest
 
 			return Stream.of(new FailureCase("when internally issued token cannot be re-verified",
 								 authenticator,
-								 upstreamToken("external-123", Map.of())))
+								 hmacMaterial().upstreamToken("external-123", Map.of())))
+			             .map(Arguments::of);
+		}
+	}
+
+	@Nested
+	@DisplayName("as runtime pipeline failure")
+	@TestInstance(PER_CLASS)
+	final class RuntimePipelineFailure
+	{
+		@ParameterizedTest(name = "{0}")
+		@MethodSource("cases")
+		void shouldReturnUnavailableWhenResolutionThrows(final RuntimeFailureCase input)
+		{
+			final AuthenticationResult result = input.authenticator().authenticate(input.token());
+
+			assertThat(result)
+					.as(input.description())
+					.isInstanceOf(AuthenticationUnavailable.class);
+			assertThat(((AuthenticationUnavailable) result).reason())
+					.as(input.description())
+					.isEqualTo(AuthenticationUnavailableReason.SERVICE_UNAVAILABLE);
+		}
+
+		private Stream<Arguments> cases()
+		{
+			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(
+					hmacMaterial(),
+					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
+							externalIdentity ->
+							{
+								throw new IllegalStateException("user lookup offline");
+							},
+							user -> "local-" + user,
+							_ -> Set.of("ROLE_USER"),
+							_ -> 7L,
+							_ -> 7L)));
+
+			return Stream.of(new RuntimeFailureCase("when user resolution throws unexpectedly",
+								 authenticator,
+								 hmacMaterial().upstreamToken("external-123", Map.of())))
 			             .map(Arguments::of);
 		}
 	}
