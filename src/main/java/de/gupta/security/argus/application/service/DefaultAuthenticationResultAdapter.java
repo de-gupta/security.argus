@@ -16,7 +16,7 @@ import de.gupta.security.themis.domain.model.VerificationFailureReason;
 
 import java.util.Optional;
 
-final class DefaultAuthenticationResultMapper implements AuthenticationResultMapper
+final class DefaultAuthenticationResultAdapter implements AuthenticationResultAdapter
 {
 	@Override
 	public AuthenticationResult invalidCredential(final VerificationFailure failure)

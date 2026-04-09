@@ -28,11 +28,11 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
-@DisplayName("DefaultAuthenticationResultMapper")
+@DisplayName("DefaultAuthenticationResultAdapter")
 @TestInstance(PER_CLASS)
-final class DefaultAuthenticationResultMapperTest
+final class DefaultAuthenticationResultAdapterTest
 {
-	private final DefaultAuthenticationResultMapper mapper = new DefaultAuthenticationResultMapper();
+	private final DefaultAuthenticationResultAdapter mapper = new DefaultAuthenticationResultAdapter();
 
 	@FunctionalInterface
 	private interface ReasonExtractor

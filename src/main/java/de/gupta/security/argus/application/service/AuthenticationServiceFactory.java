@@ -6,7 +6,7 @@ public final class AuthenticationServiceFactory
 {
 	public static <ExternalIdentity, User> AuthenticationService create(
 			final AuthenticatorConfiguration<ExternalIdentity, User> configuration,
-			final AuthenticationResultMapper resultMapper)
+			final AuthenticationResultAdapter resultMapper)
 	{
 		return AuthenticationServiceImpl.create(configuration, resultMapper);
 	}

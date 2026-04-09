@@ -23,12 +23,12 @@ import java.util.function.Function;
 final class AuthenticationServiceImpl<ExternalIdentity, User> implements AuthenticationService
 {
     private final AuthenticatorConfiguration<ExternalIdentity, User> configuration;
-    private final AuthenticationResultMapper resultMapper;
+    private final AuthenticationResultAdapter resultAdapter;
     private final LazyAuthenticationDependencies<ExternalIdentity, User> dependencies;
 
     static <ExternalIdentity, User> AuthenticationService create(
             final AuthenticatorConfiguration<ExternalIdentity, User> configuration,
-            final AuthenticationResultMapper resultMapper)
+            final AuthenticationResultAdapter resultMapper)
     {
         return new AuthenticationServiceImpl<>(configuration,
                 resultMapper,
@@ -40,23 +40,29 @@ final class AuthenticationServiceImpl<ExternalIdentity, User> implements Authent
     {
         return Fallible.beckon(token)
                        .metamorphose(this::authenticateUnchecked, exceptional())
-                       .coronate(Function.identity(), exception -> resultMapper.unavailable(exception.getMessage()));
+                       .coronate(Function.identity(), exception -> resultAdapter.unavailable(exception.getMessage()));
     }
 
     private AuthenticationResult authenticateUnchecked(final String token)
     {
         return switch (dependencies.summon().tokenExchangeService().exchange(token))
         {
-            case ExchangeFailure failure -> resultMapper.exchangeFailure(failure);
+            case ExchangeFailure failure -> resultAdapter.exchangeFailure(failure);
             case ExchangeSuccess success -> authenticateIssuedToken(success.token().token());
         };
+    }
+
+    private List<Portent<AuthenticationResult>> exceptional()
+    {
+        return List.of(Portent.foretell(RuntimeException.class,
+                exception -> resultAdapter.unavailable(exception.getMessage())));
     }
 
     private AuthenticationResult authenticateIssuedToken(final String issuedToken)
     {
         return switch (dependencies.summon().authenticatedTokenVerifier().verify(issuedToken))
         {
-            case VerificationFailure failure -> resultMapper.internalCredentialFailure(failure);
+            case VerificationFailure failure -> resultAdapter.internalCredentialFailure(failure);
             case VerificationSuccess success -> authenticateVerifiedInternalToken(success.token());
         };
     }
@@ -64,8 +70,8 @@ final class AuthenticationServiceImpl<ExternalIdentity, User> implements Authent
     private AuthenticationResult authenticateVerifiedInternalToken(final NormalizedToken token)
     {
         return resolveVersion(token)
-                .<AuthenticationResult>map(version -> verifyCurrentness(token, version))
-                .orElseGet(() -> resultMapper.missingVersionClaim(
+                .map(version -> verifyCurrentness(token, version))
+                .orElseGet(() -> resultAdapter.missingVersionClaim(
                         configuration.authenticatedTokenContract().versionAttributeName()));
     }
 
@@ -79,7 +85,7 @@ final class AuthenticationServiceImpl<ExternalIdentity, User> implements Authent
                                                                                                    version));
         return switch (currentnessResult)
         {
-            case TokenVersionVerificationFailure<Long> failure -> resultMapper.currentnessFailure(failure);
+            case TokenVersionVerificationFailure<Long> failure -> resultAdapter.currentnessFailure(failure);
             case TokenVersionVerificationSuccess<Long> _ -> authenticateSuccess(token);
         };
     }
@@ -94,18 +100,12 @@ final class AuthenticationServiceImpl<ExternalIdentity, User> implements Authent
         return token.version().map(Number::longValue);
     }
 
-    private List<Portent<AuthenticationResult>> exceptional()
-    {
-        return List.of(Portent.foretell(RuntimeException.class,
-                exception -> resultMapper.unavailable(exception.getMessage())));
-    }
-
     private AuthenticationServiceImpl(final AuthenticatorConfiguration<ExternalIdentity, User> configuration,
-                                      final AuthenticationResultMapper resultMapper,
+                                      final AuthenticationResultAdapter resultAdapter,
                                       final LazyAuthenticationDependencies<ExternalIdentity, User> dependencies)
     {
         this.configuration = configuration;
-        this.resultMapper = resultMapper;
+        this.resultAdapter = resultAdapter;
         this.dependencies = dependencies;
     }
 

@@ -5,7 +5,7 @@ import de.gupta.security.augustus.domain.model.TokenVersionVerificationFailure;
 import de.gupta.security.hermes.domain.model.ExchangeFailure;
 import de.gupta.security.themis.domain.model.VerificationFailure;
 
-public interface AuthenticationResultMapper
+public interface AuthenticationResultAdapter
 {
 	AuthenticationResult invalidCredential(final VerificationFailure failure);
 

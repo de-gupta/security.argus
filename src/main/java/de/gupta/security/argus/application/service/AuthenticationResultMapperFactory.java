@@ -2,9 +2,9 @@ package de.gupta.security.argus.application.service;
 
 public final class AuthenticationResultMapperFactory
 {
-	public static AuthenticationResultMapper create()
+	public static AuthenticationResultAdapter create()
 	{
-		return new DefaultAuthenticationResultMapper();
+		return new DefaultAuthenticationResultAdapter();
 	}
 
 	private AuthenticationResultMapperFactory()
