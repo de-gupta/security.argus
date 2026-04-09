@@ -15,7 +15,7 @@ final class LazyAuthenticationDependencies<ExternalIdentity, User>
 {
 	private final AuthenticatorConfiguration<ExternalIdentity, User> configuration;
 
-	private volatile AuthenticationDependencies<User> cachedDependencies;
+	private volatile AuthenticationDependencies cachedDependencies;
 
 	static <ExternalIdentity, User> LazyAuthenticationDependencies<ExternalIdentity, User> create(
 			final AuthenticatorConfiguration<ExternalIdentity, User> configuration)
@@ -23,9 +23,9 @@ final class LazyAuthenticationDependencies<ExternalIdentity, User>
 		return new LazyAuthenticationDependencies<>(configuration);
 	}
 
-	AuthenticationDependencies<User> summon()
+	AuthenticationDependencies summon()
 	{
-		final AuthenticationDependencies<User> presentDependencies = cachedDependencies;
+		final AuthenticationDependencies presentDependencies = cachedDependencies;
 		if (presentDependencies != null)
 		{
 			return presentDependencies;
@@ -41,11 +41,9 @@ final class LazyAuthenticationDependencies<ExternalIdentity, User>
 		}
 	}
 
-	private AuthenticationDependencies<User> createDependencies()
+	private AuthenticationDependencies createDependencies()
 	{
-		final TokenVerifier upstreamTokenVerifier = createUpstreamTokenVerifier();
-		return new AuthenticationDependencies<>(upstreamTokenVerifier,
-				createTokenExchangeService(upstreamTokenVerifier),
+		return new AuthenticationDependencies(createTokenExchangeService(),
 				createAuthenticatedTokenVerifier(),
 				createTokenVersionVerifier());
 	}
@@ -76,7 +74,7 @@ final class LazyAuthenticationDependencies<ExternalIdentity, User>
 		};
 	}
 
-	private TokenExchangeService createTokenExchangeService(final TokenVerifier upstreamTokenVerifier)
+	private TokenExchangeService createTokenExchangeService()
 	{
 		final TokenIssuancePolicy issuancePolicy =
 				TokenIssuancePolicy.of(configuration.authenticatedTokenContract().issuer(),
@@ -99,25 +97,25 @@ final class LazyAuthenticationDependencies<ExternalIdentity, User>
 
 		return switch (configuration.authenticatedTokenMintingConfiguration().tokenSignerConfiguration())
 		{
-			case TokenSignerConfiguration.Hmac hmac -> TokenExchangeServiceFactory.hmac(upstreamTokenVerifier,
+			case TokenSignerConfiguration.Hmac hmac -> TokenExchangeServiceFactory.hmac(createUpstreamTokenVerifier(),
 					issuancePolicy,
 					hmac.issuerSecret(),
 					exchangeConfiguration);
-			case TokenSignerConfiguration.Rsa rsa -> TokenExchangeServiceFactory.rsa(upstreamTokenVerifier,
+			case TokenSignerConfiguration.Rsa rsa -> TokenExchangeServiceFactory.rsa(createUpstreamTokenVerifier(),
 					issuancePolicy,
 					rsa.issuerPrivateKey(),
 					exchangeConfiguration);
-			case TokenSignerConfiguration.Ec ec -> TokenExchangeServiceFactory.ec(upstreamTokenVerifier,
+			case TokenSignerConfiguration.Ec ec -> TokenExchangeServiceFactory.ec(createUpstreamTokenVerifier(),
 					issuancePolicy,
 					ec.issuerPrivateKey(),
 					exchangeConfiguration);
 		};
 	}
 
-	private TokenVersionVerifier<User, Long> createTokenVersionVerifier()
+	private TokenVersionVerifier<String, Long> createTokenVersionVerifier()
 	{
 		return TokenVersionVerifierFactory.create(
-				user -> configuration.identityMappingConfiguration().userTokenVersionResolver().resolveVersion(user));
+				configuration.identityMappingConfiguration().authenticatedSubjectVersionResolver()::resolveVersion);
 	}
 
 	private TokenVerificationPolicy toThemisPolicy(final TokenTrustPolicy policy)

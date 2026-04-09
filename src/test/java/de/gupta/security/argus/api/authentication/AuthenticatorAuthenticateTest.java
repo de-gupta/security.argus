@@ -70,16 +70,16 @@ final class AuthenticatorAuthenticateTest
 		return AuthenticatorConfiguration.<String, String>builder()
 		                                 .upstreamTrustConfiguration(UpstreamTrustConfiguration.Hmac.of(
 												 TokenTrustPolicy.of(Duration.ZERO, true, Set.of(AUDIENCE),
-														 Optional.of(UPSTREAM_ISSUER)),
+						                                 Optional.of(UPSTREAM_ISSUER)),
 												 UPSTREAM_SECRET))
 		                                 .authenticatedTokenContract(AuthenticatedTokenContract.of(INTERNAL_ISSUER,
 												 Set.of(AUDIENCE),
 												 Duration.ofMinutes(15)))
 		                                 .authenticatedTokenMintingConfiguration(
 												 AuthenticatedTokenMintingConfiguration.of(
-														 TokenSignerConfiguration.Hmac.of(INTERNAL_SECRET)))
+						                                 TokenSignerConfiguration.Hmac.of(INTERNAL_SECRET)))
 		                                 .authenticatedTokenVerificationConfiguration(
-												 authenticatedTokenVerificationConfiguration)
+				                                 authenticatedTokenVerificationConfiguration)
 		                                 .identityMappingConfiguration(identityMappingConfiguration)
 		                                 .clock(CLOCK)
 		                                 .build();
@@ -177,6 +177,7 @@ final class AuthenticatorAuthenticateTest
 					IdentityMappingConfiguration.of(externalIdentity -> Optional.of("user-123"),
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER", "ROLE_ADMIN"),
+							_ -> 7L,
 							_ -> 7L)));
 
 			return Stream.of(new SuccessCase("when upstream token resolves and stays current",
@@ -211,6 +212,7 @@ final class AuthenticatorAuthenticateTest
 					IdentityMappingConfiguration.of(externalIdentity -> Optional.of("user-123"),
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER"),
+							_ -> 7L,
 							_ -> 7L)));
 
 			return Stream.of(new FailureCase("when upstream signature does not match",
@@ -248,16 +250,19 @@ final class AuthenticatorAuthenticateTest
 							externalIdentity -> Optional.of("user-123"),
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER"),
+							_ -> 7L,
 							_ -> 7L)));
 			final Authenticator missingUserAuthenticator = AuthenticatorFactory.create(baseConfiguration(
 					IdentityMappingConfiguration.of(externalIdentity -> Optional.<String>empty(),
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER"),
+							_ -> 7L,
 							_ -> 7L)));
 			final Authenticator missingSubjectAuthenticator = AuthenticatorFactory.create(baseConfiguration(
 					IdentityMappingConfiguration.of(externalIdentity -> Optional.of("user-123"),
 							_ -> " ",
 							_ -> Set.of("ROLE_USER"),
+							_ -> 7L,
 							_ -> 7L)));
 
 			return Stream.of(
@@ -298,12 +303,13 @@ final class AuthenticatorAuthenticateTest
 
 		private Stream<Arguments> cases()
 		{
-			final AtomicLong version = new AtomicLong(7L);
+			final AtomicLong currentVersion = new AtomicLong(8L);
 			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(
 					IdentityMappingConfiguration.of(externalIdentity -> Optional.of("user-123"),
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER"),
-							_ -> version.getAndIncrement())));
+							_ -> 7L,
+							_ -> currentVersion.get())));
 
 			return Stream.of(new FailureCase("when token version is outdated immediately after minting",
 								 authenticator,
@@ -337,6 +343,7 @@ final class AuthenticatorAuthenticateTest
 					IdentityMappingConfiguration.of(externalIdentity -> Optional.of("user-123"),
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER"),
+							_ -> 7L,
 							_ -> 7L),
 					AuthenticatedTokenVerificationConfiguration.of(
 							TokenTrustPolicy.of(Duration.ZERO, true, Set.of(AUDIENCE), Optional.of("wrong-issuer")))));

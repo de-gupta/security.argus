@@ -280,7 +280,8 @@ final class AuthenticatorConfigurationTest
         return IdentityMappingConfiguration.of(externalId -> Optional.of("local-" + externalId),
                 user -> user,
                 user -> Set.of("ROLE_" + user.toUpperCase()),
-                user -> (long) Objects.requireNonNull(user).length());
+                user -> (long) Objects.requireNonNull(user).length(),
+                subject -> (long) Objects.requireNonNull(subject).length());
     }
 
     private static Clock clock()

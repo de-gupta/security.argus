@@ -47,7 +47,20 @@ final class DefaultAuthenticationResultMapper implements AuthenticationResultMap
 	@Override
 	public AuthenticationResult exchangeFailure(final ExchangeFailure failure)
 	{
-		return unavailable(detailOf("exchange", failure.reason().name(), failure.details()));
+		return switch (failure.reason())
+		{
+			case UPSTREAM_VERIFICATION_FAILED -> invalidCredentialFromHermes(failure.details());
+			case MISSING_EXTERNAL_IDENTITY -> failure.details()
+			                                         .map(this::missingExternalIdentity)
+			                                         .orElseGet(() -> IdentityNotResolved.of(
+					                                         IdentityNotResolvedReason.MISSING_EXTERNAL_IDENTITY));
+			case USER_NOT_FOUND -> failure.details()
+			                              .map(this::userNotFound)
+			                              .orElseGet(() -> IdentityNotResolved.of(
+					                              IdentityNotResolvedReason.USER_NOT_FOUND));
+			case MISSING_LOCAL_SUBJECT -> IdentityNotResolved.of(IdentityNotResolvedReason.MISSING_LOCAL_SUBJECT);
+			case ISSUANCE_FAILED -> unavailable(detailOf("exchange", failure.reason().name(), failure.details()));
+		};
 	}
 
 	@Override
@@ -92,6 +105,26 @@ final class DefaultAuthenticationResultMapper implements AuthenticationResultMap
 	public AuthenticationResult unavailable(final String details)
 	{
 		return AuthenticationUnavailable.of(AuthenticationUnavailableReason.SERVICE_UNAVAILABLE, details);
+	}
+
+	private AuthenticationResult invalidCredentialFromHermes(final Optional<String> details)
+	{
+		final Optional<VerificationFailureReason> upstreamReason =
+				details.flatMap(this::parseVerificationFailureReason);
+		return upstreamReason.map(reason -> invalidCredential(VerificationFailure.of(reason)))
+		                     .orElseGet(() -> InvalidCredential.of(InvalidCredentialReason.UNSUPPORTED));
+	}
+
+	private Optional<VerificationFailureReason> parseVerificationFailureReason(final String details)
+	{
+		try
+		{
+			return Optional.of(VerificationFailureReason.valueOf(details));
+		}
+		catch (IllegalArgumentException ignored)
+		{
+			return Optional.empty();
+		}
 	}
 
 	private InvalidCredentialReason map(final VerificationFailureReason reason)
