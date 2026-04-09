@@ -283,7 +283,7 @@ final class AuthenticatorAuthenticateTest
 			assertThat(success.identity().expiresAt())
 					.as(input.description())
 					.contains(CLOCK.instant().plus(Duration.ofMinutes(15)));
-			assertThat(success.identity().validFrom())
+			assertThat(success.identity().notBefore())
 					.as(input.description())
 					.isEmpty();
 		}

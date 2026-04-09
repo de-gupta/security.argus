@@ -6,9 +6,10 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.Set;
 
-public record NormalizedTokenAuthenticatedIdentity(NormalizedToken token)
-		implements AuthenticatedIdentity
+public final class NormalizedTokenAuthenticatedIdentity implements AuthenticatedIdentity
 {
+	private final NormalizedToken token;
+
 	public static AuthenticatedIdentity of(final NormalizedToken token)
 	{
 		return new NormalizedTokenAuthenticatedIdentity(token);
@@ -45,7 +46,7 @@ public record NormalizedTokenAuthenticatedIdentity(NormalizedToken token)
 	}
 
 	@Override
-	public Optional<Instant> validFrom()
+	public Optional<Instant> notBefore()
 	{
 		return token.notBefore();
 	}
@@ -54,5 +55,10 @@ public record NormalizedTokenAuthenticatedIdentity(NormalizedToken token)
 	public Set<String> roles()
 	{
 		return token.roles();
+	}
+
+	private NormalizedTokenAuthenticatedIdentity(NormalizedToken token)
+	{
+		this.token = token;
 	}
 }

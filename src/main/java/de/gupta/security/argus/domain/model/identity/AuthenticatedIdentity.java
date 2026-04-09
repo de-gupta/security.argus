@@ -17,7 +17,7 @@ public sealed interface AuthenticatedIdentity
 
 	Optional<Instant> expiresAt();
 
-	Optional<Instant> validFrom();
+	Optional<Instant> notBefore();
 
 	Set<String> roles();
 }
