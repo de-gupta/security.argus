@@ -18,11 +18,11 @@
     <url>https://github.com/de-gupta/security.argus.git</url>
 
     <properties>
-        <security.dependencies.bom.version>0.1.1</security.dependencies.bom.version>
+        <security.dependencies.bom.version>0.2.1</security.dependencies.bom.version>
 
-        <themis.version>2.3.0</themis.version>
-        <hermes.version>1.1.0</hermes.version>
-        <augustus.version>1.0.1</augustus.version>
+        <themis.version>2.5.0</themis.version>
+        <hermes.version>1.3.0</hermes.version>
+        <augustus.version>1.2.0</augustus.version>
     </properties>
 
     <dependencyManagement>
