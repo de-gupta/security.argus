@@ -52,12 +52,15 @@ final class LazyAuthenticationDependencies<ExternalIdentity, User>
 	{
 		return switch (configuration.upstreamTrustConfiguration())
 		{
-			case UpstreamTrustConfiguration.Hmac hmac ->
-					TokenVerifierFactory.hmac(toThemisPolicy(hmac.trustPolicy()), hmac.issuerSecret());
-			case UpstreamTrustConfiguration.Rsa rsa ->
-					TokenVerifierFactory.rsa(toThemisPolicy(rsa.trustPolicy()), rsa.issuerPublicKey());
-			case UpstreamTrustConfiguration.Ec ec ->
-					TokenVerifierFactory.ec(toThemisPolicy(ec.trustPolicy()), ec.issuerPublicKey());
+			case UpstreamTrustConfiguration.Hmac hmac -> TokenVerifierFactory.hmac(toThemisPolicy(hmac.trustPolicy()),
+					hmac.issuerSecret(),
+					configuration.clock());
+			case UpstreamTrustConfiguration.Rsa rsa -> TokenVerifierFactory.rsa(toThemisPolicy(rsa.trustPolicy()),
+					rsa.issuerPublicKey(),
+					configuration.clock());
+			case UpstreamTrustConfiguration.Ec ec -> TokenVerifierFactory.ec(toThemisPolicy(ec.trustPolicy()),
+					ec.issuerPublicKey(),
+					configuration.clock());
 		};
 	}
 
@@ -68,9 +71,15 @@ final class LazyAuthenticationDependencies<ExternalIdentity, User>
 
 		return switch (configuration.authenticatedTokenMintingConfiguration().tokenSignerConfiguration())
 		{
-			case TokenSignerConfiguration.Hmac hmac -> TokenVerifierFactory.hmac(policy, hmac.issuerSecret());
-			case TokenSignerConfiguration.Rsa rsa -> TokenVerifierFactory.rsa(policy, rsa.issuerPublicKey());
-			case TokenSignerConfiguration.Ec ec -> TokenVerifierFactory.ec(policy, ec.issuerPublicKey());
+			case TokenSignerConfiguration.Hmac hmac -> TokenVerifierFactory.hmac(policy,
+					hmac.issuerSecret(),
+					configuration.clock());
+			case TokenSignerConfiguration.Rsa rsa -> TokenVerifierFactory.rsa(policy,
+					rsa.issuerPublicKey(),
+					configuration.clock());
+			case TokenSignerConfiguration.Ec ec -> TokenVerifierFactory.ec(policy,
+					ec.issuerPublicKey(),
+					configuration.clock());
 		};
 	}
 
