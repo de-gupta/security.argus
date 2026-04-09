@@ -17,8 +17,7 @@
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <security.bom.version>0.1.1</security.bom.version>
-        <themis.version>2.3.0</themis.version>
+        <security.bom.version>0.1.2</security.bom.version>
 
         <maven.release.plugin.version>3.1.1</maven.release.plugin.version>
         <maven.gpg.plugin.version>3.2.8</maven.gpg.plugin.version>
