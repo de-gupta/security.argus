@@ -1,5 +1,6 @@
 package de.gupta.security.argus.api.authentication;
 
+import de.gupta.security.argus.api.cache.TokenAuthenticationCache;
 import de.gupta.security.argus.api.identity.IdentityMappingConfiguration;
 import de.gupta.security.argus.api.token.AuthenticatedTokenContract;
 import de.gupta.security.argus.api.token.AuthenticatedTokenMintingConfiguration;
@@ -15,8 +16,27 @@ public record AuthenticatorConfiguration<ExternalIdentity, User>(
         AuthenticatedTokenMintingConfiguration authenticatedTokenMintingConfiguration,
         AuthenticatedTokenVerificationConfiguration authenticatedTokenVerificationConfiguration,
         IdentityMappingConfiguration<ExternalIdentity, User> identityMappingConfiguration,
-        Clock clock)
+        Clock clock,
+        TokenAuthenticationCache tokenAuthenticationCache)
 {
+    public static <ExternalIdentity, User> AuthenticatorConfiguration<ExternalIdentity, User> of(
+            final UpstreamTrustConfiguration upstreamTrustConfiguration,
+            final AuthenticatedTokenContract authenticatedTokenContract,
+            final AuthenticatedTokenMintingConfiguration authenticatedTokenMintingConfiguration,
+            final AuthenticatedTokenVerificationConfiguration authenticatedTokenVerificationConfiguration,
+            final IdentityMappingConfiguration<ExternalIdentity, User> identityMappingConfiguration,
+            final Clock clock,
+            final TokenAuthenticationCache tokenAuthenticationCache)
+    {
+        return new AuthenticatorConfiguration<>(upstreamTrustConfiguration,
+                authenticatedTokenContract,
+                authenticatedTokenMintingConfiguration,
+                authenticatedTokenVerificationConfiguration,
+                identityMappingConfiguration,
+                clock,
+                tokenAuthenticationCache);
+    }
+
     public static <ExternalIdentity, User> AuthenticatorConfiguration<ExternalIdentity, User> of(
             final UpstreamTrustConfiguration upstreamTrustConfiguration,
             final AuthenticatedTokenContract authenticatedTokenContract,
@@ -25,12 +45,13 @@ public record AuthenticatorConfiguration<ExternalIdentity, User>(
             final IdentityMappingConfiguration<ExternalIdentity, User> identityMappingConfiguration,
             final Clock clock)
     {
-        return new AuthenticatorConfiguration<>(upstreamTrustConfiguration,
+        return of(upstreamTrustConfiguration,
                 authenticatedTokenContract,
                 authenticatedTokenMintingConfiguration,
                 authenticatedTokenVerificationConfiguration,
                 identityMappingConfiguration,
-                clock);
+                clock,
+                TokenAuthenticationCache.noOp());
     }
 
     public static <ExternalIdentity, User> AuthenticatorConfiguration<ExternalIdentity, User> of(
@@ -65,6 +86,7 @@ public record AuthenticatorConfiguration<ExternalIdentity, User>(
         Objects.requireNonNull(identityMappingConfiguration,
                 "identityMappingConfiguration must not be null");
         Objects.requireNonNull(clock, "clock must not be null");
+        Objects.requireNonNull(tokenAuthenticationCache, "tokenAuthenticationCache must not be null");
     }
 
     public static final class Builder<ExternalIdentity, User>
@@ -75,6 +97,7 @@ public record AuthenticatorConfiguration<ExternalIdentity, User>(
         private AuthenticatedTokenVerificationConfiguration authenticatedTokenVerificationConfiguration;
         private IdentityMappingConfiguration<ExternalIdentity, User> identityMappingConfiguration;
         private Clock clock = Clock.systemUTC();
+        private TokenAuthenticationCache tokenAuthenticationCache = TokenAuthenticationCache.noOp();
 
         private Builder()
         {
@@ -121,6 +144,13 @@ public record AuthenticatorConfiguration<ExternalIdentity, User>(
             return this;
         }
 
+        public Builder<ExternalIdentity, User> tokenAuthenticationCache(
+                final TokenAuthenticationCache tokenAuthenticationCache)
+        {
+            this.tokenAuthenticationCache = tokenAuthenticationCache;
+            return this;
+        }
+
         public AuthenticatorConfiguration<ExternalIdentity, User> build()
         {
             return new AuthenticatorConfiguration<>(upstreamTrustConfiguration,
@@ -128,7 +158,8 @@ public record AuthenticatorConfiguration<ExternalIdentity, User>(
                     authenticatedTokenMintingConfiguration,
                     authenticatedTokenVerificationConfiguration,
                     identityMappingConfiguration,
-                    clock);
+                    clock,
+                    tokenAuthenticationCache);
         }
     }
 }
