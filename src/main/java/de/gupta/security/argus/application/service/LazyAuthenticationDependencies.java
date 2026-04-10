@@ -7,6 +7,7 @@ import de.gupta.security.argus.api.trust.UpstreamTrustConfiguration;
 import de.gupta.security.augustus.api.TokenVersionVerifier;
 import de.gupta.security.augustus.api.TokenVersionVerifierFactory;
 import de.gupta.security.hermes.api.*;
+import de.gupta.security.themis.api.TokenVerificationConfiguration;
 import de.gupta.security.themis.api.TokenVerificationPolicy;
 import de.gupta.security.themis.api.TokenVerifier;
 import de.gupta.security.themis.api.TokenVerifierFactory;
@@ -52,13 +53,15 @@ final class LazyAuthenticationDependencies<ExternalIdentity, User>
 	{
 		return switch (configuration.upstreamTrustConfiguration())
 		{
-			case UpstreamTrustConfiguration.Hmac hmac -> TokenVerifierFactory.hmac(toThemisPolicy(hmac.trustPolicy()),
-					hmac.issuerSecret(),
-					configuration.clock());
-			case UpstreamTrustConfiguration.Rsa rsa -> TokenVerifierFactory.rsa(toThemisPolicy(rsa.trustPolicy()),
-					rsa.issuerPublicKey(),
-					configuration.clock());
-			case UpstreamTrustConfiguration.Ec ec -> TokenVerifierFactory.ec(toThemisPolicy(ec.trustPolicy()),
+			case UpstreamTrustConfiguration.Hmac hmac ->
+					TokenVerifierFactory.hmac(toThemisConfiguration(hmac.trustPolicy()),
+							hmac.issuerSecret(),
+							configuration.clock());
+			case UpstreamTrustConfiguration.Rsa rsa ->
+					TokenVerifierFactory.rsa(toThemisConfiguration(rsa.trustPolicy()),
+							rsa.issuerPublicKey(),
+							configuration.clock());
+			case UpstreamTrustConfiguration.Ec ec -> TokenVerifierFactory.ec(toThemisConfiguration(ec.trustPolicy()),
 					ec.issuerPublicKey(),
 					configuration.clock());
 		};
@@ -66,20 +69,22 @@ final class LazyAuthenticationDependencies<ExternalIdentity, User>
 
 	private TokenVerifier createAuthenticatedTokenVerifier()
 	{
-		final TokenVerificationPolicy policy =
-				toThemisPolicy(configuration.authenticatedTokenVerificationConfiguration().trustPolicy());
+		final TokenVerificationConfiguration configuration = toThemisConfigurationWithClaimNames(
+				this.configuration.authenticatedTokenVerificationConfiguration().trustPolicy(),
+				this.configuration.authenticatedTokenContract().roleAttributeName(),
+				this.configuration.authenticatedTokenContract().versionAttributeName());
 
-		return switch (configuration.authenticatedTokenMintingConfiguration().tokenSignerConfiguration())
+		return switch (this.configuration.authenticatedTokenMintingConfiguration().tokenSignerConfiguration())
 		{
-			case TokenSignerConfiguration.Hmac hmac -> TokenVerifierFactory.hmac(policy,
+			case TokenSignerConfiguration.Hmac hmac -> TokenVerifierFactory.hmac(configuration,
 					hmac.issuerSecret(),
-					configuration.clock());
-			case TokenSignerConfiguration.Rsa rsa -> TokenVerifierFactory.rsa(policy,
+					this.configuration.clock());
+			case TokenSignerConfiguration.Rsa rsa -> TokenVerifierFactory.rsa(configuration,
 					rsa.issuerPublicKey(),
-					configuration.clock());
-			case TokenSignerConfiguration.Ec ec -> TokenVerifierFactory.ec(policy,
+					this.configuration.clock());
+			case TokenSignerConfiguration.Ec ec -> TokenVerifierFactory.ec(configuration,
 					ec.issuerPublicKey(),
-					configuration.clock());
+					this.configuration.clock());
 		};
 	}
 
@@ -127,6 +132,18 @@ final class LazyAuthenticationDependencies<ExternalIdentity, User>
 	{
 		return TokenVersionVerifierFactory.create(
 				configuration.identityMappingConfiguration().authenticatedSubjectVersionResolver()::resolveVersion);
+	}
+
+	private TokenVerificationConfiguration toThemisConfiguration(final TokenTrustPolicy policy)
+	{
+		return TokenVerificationConfiguration.of(toThemisPolicy(policy));
+	}
+
+	private TokenVerificationConfiguration toThemisConfigurationWithClaimNames(final TokenTrustPolicy policy,
+	                                                                           final String rolesClaimName,
+	                                                                           final String versionClaimName)
+	{
+		return TokenVerificationConfiguration.of(toThemisPolicy(policy), rolesClaimName, versionClaimName);
 	}
 
 	private TokenVerificationPolicy toThemisPolicy(final TokenTrustPolicy policy)
