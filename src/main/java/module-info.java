@@ -20,4 +20,5 @@ module de.gupta.security.argus
 	requires de.gupta.aletheia;
 	requires de.gupta.athena;
 	requires com.github.benmanes.caffeine;
+	requires jjwt.api;
 }
