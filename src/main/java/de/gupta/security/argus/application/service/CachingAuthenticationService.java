@@ -1,5 +1,6 @@
 package de.gupta.security.argus.application.service;
 
+import de.gupta.aletheia.functional.Unfolding;
 import de.gupta.security.argus.api.cache.TokenAuthenticationCache;
 import de.gupta.security.argus.domain.model.authentication.AuthenticationResult;
 import de.gupta.security.argus.domain.model.authentication.AuthenticationSuccess;
@@ -7,7 +8,6 @@ import de.gupta.security.argus.domain.model.authentication.currentness.Authentic
 import de.gupta.security.argus.utility.TokenHasher;
 
 import java.time.Instant;
-import java.util.Optional;
 
 final class CachingAuthenticationService implements AuthenticationService
 {
@@ -22,47 +22,33 @@ final class CachingAuthenticationService implements AuthenticationService
 	@Override
 	public AuthenticationResult authenticate(final String token)
 	{
-		// TODO: convert to Unfolding chain with transformation steps
 		final String hash = TokenHasher.sha256Hex(token);
-
-		final Optional<AuthenticationResult> cached = cache.get(hash);
-		if (cached.isPresent())
-		{
-			return cached.get();
-		}
-
-		final AuthenticationResult result = delegate.authenticate(token);
-
-		final Instant expiresAt = resolveExpiresAt(result);
-		if (shouldCache(result))
-		{
-			cache.put(hash, result, expiresAt);
-		}
-
-		return result;
+		return Unfolding.augur(cache.get(hash))
+		                .ordain(() -> computeAndStore(hash, token));
 	}
 
 	private static boolean shouldCache(final AuthenticationResult result)
 	{
-		// TODO: 2 branches same. why cache failure too?
-		return switch (result)
-		{
-			case AuthenticationSuccess _ -> true;
-			case AuthenticationNotCurrent _ -> false;
-			default -> true;
-		};
+		return !(result instanceof AuthenticationNotCurrent);
 	}
 
 	private static Instant resolveExpiresAt(final AuthenticationResult result)
 	{
-		// TODO: use switch
-		if (result instanceof AuthenticationSuccess success)
+		return switch (result)
 		{
-			return success.identity()
-			              .expiresAt()
-			              .orElse(Instant.MAX);
+			case AuthenticationSuccess success -> success.identity().expiresAt().orElse(Instant.MAX);
+			default -> Instant.MAX;
+		};
+	}
+
+	private AuthenticationResult computeAndStore(final String hash, final String token)
+	{
+		final AuthenticationResult result = delegate.authenticate(token);
+		if (shouldCache(result))
+		{
+			cache.put(hash, result, resolveExpiresAt(result));
 		}
-		return Instant.MAX;
+		return result;
 	}
 
 	private CachingAuthenticationService(

@@ -20,7 +20,6 @@ final class CaffeineTokenAuthenticationCache implements TokenAuthenticationCache
 {
 	private final Cache<String, CacheEntry> cache;
 	private final Map<String, String> subjectToHash;
-	// TODO: these 2 vars are not being used. design smell or future hooks?
 	private final AuthenticationCacheConfiguration configuration;
 	private final Clock clock;
 
@@ -64,6 +63,26 @@ final class CaffeineTokenAuthenticationCache implements TokenAuthenticationCache
 		         .unlace(cache::invalidate);
 	}
 
+	private static Cache<String, CacheEntry> buildCache(
+			final AuthenticationCacheConfiguration configuration,
+			final Clock clock,
+			final Map<String, String> subjectToHash)
+	{
+		return Caffeine.newBuilder()
+		               .maximumSize(configuration.maximumSize())
+		               .expireAfter(new CacheEntryExpiry(configuration, clock))
+		               .removalListener((key, value, _) ->
+					   {
+						   if (value != null && value.result() instanceof AuthenticationSuccess(
+								   de.gupta.security.argus.domain.model.identity.AuthenticatedIdentity identity
+						   ))
+						   {
+							   subjectToHash.remove(identity.subject(), key);
+						   }
+					   })
+		               .build();
+	}
+
 	private CaffeineTokenAuthenticationCache(
 			final AuthenticationCacheConfiguration configuration,
 			final Clock clock)
@@ -71,18 +90,7 @@ final class CaffeineTokenAuthenticationCache implements TokenAuthenticationCache
 		this.configuration = configuration;
 		this.clock = clock;
 		this.subjectToHash = new ConcurrentHashMap<>();
-		// TODO: consider taking this out to a static helper method
-		this.cache = Caffeine.newBuilder()
-		                     .maximumSize(configuration.maximumSize())
-		                     .expireAfter(new CacheEntryExpiry(configuration, clock))
-		                     .removalListener((key, value, cause) ->
-							 {
-								 if (value != null && value.result() instanceof AuthenticationSuccess success)
-								 {
-									 subjectToHash.remove(success.identity().subject(), key);
-								 }
-							 })
-		                     .build();
+		this.cache = buildCache(configuration, clock, this.subjectToHash);
 	}
 
 	private record CacheEntry(AuthenticationResult result, Instant expiresAt)

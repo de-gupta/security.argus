@@ -9,7 +9,6 @@ public final class AuthenticationServiceFactory
 			final AuthenticatorConfiguration<ExternalIdentity, User> configuration,
 			final AuthenticationResultAdapter resultMapper)
 	{
-		// TODO: is this worth converting to Unfolding chain with a pair as intermediate and a final transform? would be more elegant and would save intermediate vars
 		final AuthenticationService core = AuthenticationServiceImpl.create(configuration, resultMapper);
 		final TokenAuthenticationCache cache = configuration.tokenAuthenticationCache();
 		return CachingAuthenticationService.wrap(core, cache);
