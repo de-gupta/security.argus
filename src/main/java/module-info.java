@@ -2,6 +2,7 @@ module de.gupta.security.argus
 {
 	exports de.gupta.security.argus.api.authentication;
 	exports de.gupta.security.argus.api.cache;
+	exports de.gupta.security.argus.cache;
 	exports de.gupta.security.argus.api.identity;
 	exports de.gupta.security.argus.api.token;
 	exports de.gupta.security.argus.api.trust;
