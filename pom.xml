@@ -9,7 +9,7 @@
     </parent>
 
     <artifactId>security.argus</artifactId>
-    <version>0.1.2-SNAPSHOT</version>
+    <version>0.2.0</version>
 
     <name>${artifactId}</name>
     <description>A library for orchestrating the authentication using tokens</description>
@@ -89,6 +89,6 @@
         <connection>scm:git:ssh://git@github.com/de-gupta/security.argus.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/de-gupta/security.argus.git</developerConnection>
         <url>https://github.com/de-gupta/security.argus.git</url>
-        <tag>HEAD</tag>
+        <tag>v0.2.0</tag>
     </scm>
 </project>
