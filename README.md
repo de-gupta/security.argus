@@ -17,8 +17,6 @@ Argus performs this flow:
     - `AuthenticationSuccess`
     - or one typed failure result
 
-Argus does not expose sibling library APIs to consumers.
-
 ## What Consumers Provide
 
 Consumers configure Argus with:
@@ -70,7 +68,7 @@ On success, consumers get an `AuthenticatedIdentity` with explicit normalized pr
 - `audiences()`
 - `issuedAt()`
 - `expiresAt()`
-- `validFrom()`
+- `notBefore()`
 - `roles()`
 
 This is the trusted internal authentication view after the full Argus pipeline has passed.
@@ -81,6 +79,8 @@ This is the trusted internal authentication view after the full Argus pipeline h
 import de.gupta.security.argus.api.authentication.Authenticator;
 import de.gupta.security.argus.api.authentication.AuthenticatorConfiguration;
 import de.gupta.security.argus.api.authentication.AuthenticatorFactory;
+import de.gupta.security.argus.api.cache.AuthenticationCacheConfiguration;
+import de.gupta.security.argus.api.cache.TokenAuthenticationCache;
 import de.gupta.security.argus.api.identity.ExternalIdentityAdapter;
 import de.gupta.security.argus.api.identity.IdentityMappingConfiguration;
 import de.gupta.security.argus.api.token.AuthenticatedTokenContract;
@@ -89,6 +89,7 @@ import de.gupta.security.argus.api.token.AuthenticatedTokenVerificationConfigura
 import de.gupta.security.argus.api.token.TokenSignerConfiguration;
 import de.gupta.security.argus.api.trust.TokenTrustPolicy;
 import de.gupta.security.argus.api.trust.UpstreamTrustConfiguration;
+import de.gupta.security.argus.cache.CaffeineTokenAuthenticationCache;
 import de.gupta.security.argus.domain.model.authentication.AuthenticationResult;
 import de.gupta.security.argus.domain.model.authentication.AuthenticationSuccess;
 
@@ -105,7 +106,7 @@ AuthenticatorConfiguration<String, LocalUser> configuration =
 		AuthenticatorConfiguration.<String, LocalUser>builder()
 		                          .upstreamTrustConfiguration(UpstreamTrustConfiguration.Hmac.of(
 										  TokenTrustPolicy.of(Duration.ZERO, true, Set.of("inventory"),
-						                          Optional.of("supabase")),
+												  Optional.of("supabase")),
 										  "upstream-secret-value"))
 		                          .authenticatedTokenContract(AuthenticatedTokenContract.of(
 										  "argus",
@@ -117,7 +118,7 @@ AuthenticatorConfiguration<String, LocalUser> configuration =
 		                          .authenticatedTokenVerificationConfiguration(
 										  AuthenticatedTokenVerificationConfiguration.of(
 												  TokenTrustPolicy.of(Duration.ZERO, true, Set.of("inventory"),
-								                          Optional.of("argus"))))
+														  Optional.of("argus"))))
 		                          .identityMappingConfiguration(IdentityMappingConfiguration.of(
 										  ExternalIdentityAdapter.stringIdentity(),
 										  externalIdentity -> findUserByExternalIdentity(externalIdentity),
@@ -138,6 +139,50 @@ AuthenticationSuccess success)
 String subject = success.identity().subject();
 Set<String> roles = success.identity().roles();
 }
+```
+
+## Caching
+
+Argus supports optional result caching to avoid running the full pipeline on every request.
+Caching is opt-in and disabled by default.
+
+Results are keyed by a SHA-256 hash of the raw token string — the token is never stored in memory.
+
+- `AuthenticationSuccess` entries are cached until the earlier of: the configured TTL or the token's own expiry
+- All other failures are cached for a short configurable TTL to throttle replay of bad tokens
+- `AuthenticationNotCurrent` is never cached — a version bump must take effect immediately
+
+### Using the Caffeine-backed cache
+
+```java
+TokenAuthenticationCache cache = CaffeineTokenAuthenticationCache.create(
+		AuthenticationCacheConfiguration.withDefaults()); // 10k entries, 5m success TTL, 30s failure TTL
+
+AuthenticatorConfiguration<String, LocalUser> configuration =
+		AuthenticatorConfiguration.<String, LocalUser>builder()
+		                          // ... other configuration ...
+		                          .tokenAuthenticationCache(cache)
+		                          .build();
+```
+
+### Custom TTL configuration
+
+```java
+TokenAuthenticationCache cache = CaffeineTokenAuthenticationCache.create(
+		AuthenticationCacheConfiguration.of(
+				5_000L,              // maximum entries
+				Duration.ofMinutes(2),   // success TTL
+				Duration.ofSeconds(15)   // failure TTL
+		));
+```
+
+### Forcing invalidation
+
+If a subject's version is bumped out-of-band (e.g., an admin revokes a session), any cached
+success for that subject can be removed immediately:
+
+```java
+cache.invalidateBySubject(subject);
 ```
 
 ## Reading The Example
@@ -166,12 +211,9 @@ Use Argus when:
 
 Do not use Argus when:
 
-- you only need raw JWT verification
-  then use `themis`
-- you only need token issuance/exchange
-  then use `hermes`
-- you only need currentness/version checking
-  then use `augustus`
+- you only need raw JWT verification — use `themis`
+- you only need token issuance/exchange — use `hermes`
+- you only need currentness/version checking — use `augustus`
 
 ## Relation To The Rest Of The Stack
 
