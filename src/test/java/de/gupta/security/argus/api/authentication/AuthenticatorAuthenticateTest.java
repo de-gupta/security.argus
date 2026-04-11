@@ -296,7 +296,7 @@ final class AuthenticatorAuthenticateTest
 								 AuthenticatorFactory.create(baseConfiguration(
 										 cryptoMaterial,
 										 IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
-												 externalIdentity -> Optional.of("user-123"),
+												 _ -> Optional.of("user-123"),
 												 user -> "local-" + user,
 												 _ -> Set.of("ROLE_USER", "ROLE_ADMIN"),
 												 _ -> 7L,
@@ -330,7 +330,7 @@ final class AuthenticatorAuthenticateTest
 			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(
 					hmacMaterial(),
 					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
-							externalIdentity -> Optional.of("user-123"),
+							_ -> Optional.of("user-123"),
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER"),
 							_ -> 7L,
@@ -370,7 +370,7 @@ final class AuthenticatorAuthenticateTest
 					hmacMaterial(),
 					IdentityMappingConfiguration.of("email",
 							ExternalIdentityAdapter.stringIdentity(),
-							externalIdentity -> Optional.of("user-123"),
+							_ -> Optional.of("user-123"),
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER"),
 							_ -> 7L,
@@ -378,7 +378,7 @@ final class AuthenticatorAuthenticateTest
 			final Authenticator missingUserAuthenticator = AuthenticatorFactory.create(baseConfiguration(
 					hmacMaterial(),
 					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
-							externalIdentity -> Optional.<String>empty(),
+							_ -> Optional.empty(),
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER"),
 							_ -> 7L,
@@ -386,7 +386,7 @@ final class AuthenticatorAuthenticateTest
 			final Authenticator missingSubjectAuthenticator = AuthenticatorFactory.create(baseConfiguration(
 					hmacMaterial(),
 					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
-							externalIdentity -> Optional.of("user-123"),
+							_ -> Optional.of("user-123"),
 							_ -> " ",
 							_ -> Set.of("ROLE_USER"),
 							_ -> 7L,
@@ -471,7 +471,7 @@ final class AuthenticatorAuthenticateTest
 			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(
 					hmacMaterial(),
 					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
-							externalIdentity -> Optional.of("user-123"),
+							_ -> Optional.of("user-123"),
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER"),
 							_ -> 7L,
@@ -508,7 +508,7 @@ final class AuthenticatorAuthenticateTest
 			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(
 					hmacMaterial(),
 					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
-							externalIdentity -> Optional.of("user-123"),
+							_ -> Optional.of("user-123"),
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER"),
 							_ -> 7L,
@@ -547,7 +547,7 @@ final class AuthenticatorAuthenticateTest
 			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(
 					hmacMaterial(),
 					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
-							externalIdentity ->
+							_ ->
 							{
 								throw new IllegalStateException("user lookup offline");
 							},

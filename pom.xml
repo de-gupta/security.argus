@@ -16,11 +16,11 @@
     <url>https://github.com/de-gupta/security.argus.git</url>
 
     <properties>
-        <security.dependencies.bom.version>0.2.1</security.dependencies.bom.version>
+        <security.dependencies.bom.version>0.2.3</security.dependencies.bom.version>
 
-        <themis.version>2.5.1-SNAPSHOT</themis.version>
-        <hermes.version>1.3.1-SNAPSHOT</hermes.version>
-        <augustus.version>1.2.0</augustus.version>
+        <themis.version>3.1.0</themis.version>
+        <hermes.version>1.3.1</hermes.version>
+        <augustus.version>1.2.2</augustus.version>
 
         <caffeine.version>3.2.3</caffeine.version>
     </properties>

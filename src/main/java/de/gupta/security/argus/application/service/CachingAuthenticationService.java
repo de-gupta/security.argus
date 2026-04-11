@@ -24,7 +24,17 @@ final class CachingAuthenticationService implements AuthenticationService
 	{
 		final String hash = TokenHasher.sha256Hex(token);
 		return Unfolding.augur(cache.get(hash))
-		                .ordain(() -> computeAndStore(hash, token));
+		                .infuse(() -> computeAndStore(hash, token));
+	}
+
+	private static Instant resolveExpiresAt(final AuthenticationResult result)
+	{
+		return Unfolding.beckon(result)
+		                .discern(AuthenticationSuccess.class::isInstance)
+		                .metamorphose(AuthenticationSuccess.class::cast)
+		                .metamorphose(AuthenticationSuccess::identity)
+		                .metamorphose(ai -> ai.expiresAt().orElse(Instant.MAX))
+		                .infuse(Instant.MAX);
 	}
 
 	private static boolean shouldCache(final AuthenticationResult result)
@@ -32,23 +42,11 @@ final class CachingAuthenticationService implements AuthenticationService
 		return !(result instanceof AuthenticationNotCurrent);
 	}
 
-	private static Instant resolveExpiresAt(final AuthenticationResult result)
-	{
-		return switch (result)
-		{
-			case AuthenticationSuccess success -> success.identity().expiresAt().orElse(Instant.MAX);
-			default -> Instant.MAX;
-		};
-	}
-
 	private AuthenticationResult computeAndStore(final String hash, final String token)
 	{
-		final AuthenticationResult result = delegate.authenticate(token);
-		if (shouldCache(result))
-		{
-			cache.put(hash, result, resolveExpiresAt(result));
-		}
-		return result;
+		return Unfolding.beckon(delegate.authenticate(token))
+		                .unlace(CachingAuthenticationService::shouldCache, r -> cache.put(hash, r, resolveExpiresAt(r)))
+		                .infuse(() -> null);
 	}
 
 	private CachingAuthenticationService(
