@@ -101,7 +101,6 @@ final class AuthenticationServiceImpl<ExternalIdentity, User> implements Authent
 		return token.version().map(Number::longValue);
 	}
 
-
 	private AuthenticationServiceImpl(final AuthenticatorConfiguration<ExternalIdentity, User> configuration,
 	                                  final AuthenticationResultAdapter resultAdapter,
 	                                  final LazyAuthenticationDependencies<ExternalIdentity, User> dependencies)

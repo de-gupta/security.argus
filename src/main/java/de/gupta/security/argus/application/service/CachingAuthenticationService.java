@@ -46,7 +46,7 @@ final class CachingAuthenticationService implements AuthenticationService
 	{
 		return Unfolding.beckon(delegate.authenticate(token))
 		                .unlace(CachingAuthenticationService::shouldCache, r -> cache.put(hash, r, resolveExpiresAt(r)))
-		                .infuse(() -> null);
+		                .summon();
 	}
 
 	private CachingAuthenticationService(
