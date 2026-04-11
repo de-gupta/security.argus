@@ -16,12 +16,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-final class CaffeineTokenAuthenticationCache implements TokenAuthenticationCache
+public final class CaffeineTokenAuthenticationCache implements TokenAuthenticationCache
 {
 	private final Cache<String, CacheEntry> cache;
 	private final Map<String, String> subjectToHash;
-	private final AuthenticationCacheConfiguration configuration;
-	private final Clock clock;
 
 	public static TokenAuthenticationCache create(
 			final AuthenticationCacheConfiguration configuration,
@@ -87,8 +85,6 @@ final class CaffeineTokenAuthenticationCache implements TokenAuthenticationCache
 			final AuthenticationCacheConfiguration configuration,
 			final Clock clock)
 	{
-		this.configuration = configuration;
-		this.clock = clock;
 		this.subjectToHash = new ConcurrentHashMap<>();
 		this.cache = buildCache(configuration, clock, this.subjectToHash);
 	}

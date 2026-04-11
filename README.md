@@ -89,7 +89,6 @@ import de.gupta.security.argus.api.token.AuthenticatedTokenVerificationConfigura
 import de.gupta.security.argus.api.token.TokenSignerConfiguration;
 import de.gupta.security.argus.api.trust.TokenTrustPolicy;
 import de.gupta.security.argus.api.trust.UpstreamTrustConfiguration;
-import de.gupta.security.argus.cache.CaffeineTokenAuthenticationCache;
 import de.gupta.security.argus.domain.model.authentication.AuthenticationResult;
 import de.gupta.security.argus.domain.model.authentication.AuthenticationSuccess;
 
@@ -155,8 +154,7 @@ Results are keyed by a SHA-256 hash of the raw token string — the token is nev
 ### Using the Caffeine-backed cache
 
 ```java
-TokenAuthenticationCache cache = CaffeineTokenAuthenticationCache.create(
-		AuthenticationCacheConfiguration.withDefaults()); // 10k entries, 5m success TTL, 30s failure TTL
+TokenAuthenticationCache cache = AuthenticationCacheConfiguration.withDefaults().build();
 
 AuthenticatorConfiguration<String, LocalUser> configuration =
 		AuthenticatorConfiguration.<String, LocalUser>builder()
@@ -168,12 +166,11 @@ AuthenticatorConfiguration<String, LocalUser> configuration =
 ### Custom TTL configuration
 
 ```java
-TokenAuthenticationCache cache = CaffeineTokenAuthenticationCache.create(
-		AuthenticationCacheConfiguration.of(
-				5_000L,              // maximum entries
-				Duration.ofMinutes(2),   // success TTL
-				Duration.ofSeconds(15)   // failure TTL
-		));
+TokenAuthenticationCache cache = AuthenticationCacheConfiguration.of(
+		5_000L,              // maximum entries
+		Duration.ofMinutes(2),   // success TTL
+		Duration.ofSeconds(15)   // failure TTL
+).build();
 ```
 
 ### Forcing invalidation

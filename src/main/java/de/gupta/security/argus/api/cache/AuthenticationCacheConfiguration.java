@@ -1,7 +1,9 @@
 package de.gupta.security.argus.api.cache;
 
 import de.gupta.aletheia.functional.Unfolding;
+import de.gupta.security.argus.cache.CaffeineTokenAuthenticationCache;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.util.Objects;
 
@@ -41,5 +43,15 @@ public record AuthenticationCacheConfiguration(
 		Unfolding.beckon(failureTimeToLive)
 		         .discern(Duration::isPositive,
 				         () -> new IllegalArgumentException("failureTimeToLive must be positive"));
+	}
+
+	public TokenAuthenticationCache build()
+	{
+		return CaffeineTokenAuthenticationCache.create(this);
+	}
+
+	public TokenAuthenticationCache build(final Clock clock)
+	{
+		return CaffeineTokenAuthenticationCache.create(this, clock);
 	}
 }
