@@ -75,7 +75,7 @@ final class AuthenticationServiceImpl<ExternalIdentity, User> implements Authent
 			return resultAdapter.missingVersionClaim(configuration.authenticatedTokenContract().versionAttributeName());
 		}
 		final var currentnessResult = authenticationDependencies.tokenVersionVerifier()
-		                                                        .verifyResult(
+		                                                        .verify(
 																		new SubjectVersionToken(verifiedToken.subject(),
 																				versionOpt.get()));
 		return switch (currentnessResult)
