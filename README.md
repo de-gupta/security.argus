@@ -153,6 +153,8 @@ Results are keyed by a SHA-256 hash of the raw token string — the token is nev
 
 ### Using the Caffeine-backed cache
 
+`withDefaults()` uses: 10,000 maximum entries, 5-minute success TTL, 30-second failure TTL.
+
 ```java
 TokenAuthenticationCache cache = AuthenticationCacheConfiguration.withDefaults().build();
 

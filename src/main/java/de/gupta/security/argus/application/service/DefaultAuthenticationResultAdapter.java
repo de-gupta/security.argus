@@ -76,13 +76,6 @@ final class DefaultAuthenticationResultAdapter implements AuthenticationResultAd
 	}
 
 	@Override
-	public AuthenticationResult subjectMismatch(final String expectedSubject, final String actualSubject)
-	{
-		return unavailable(
-				"Internal token subject mismatch: expected=" + expectedSubject + ", actual=" + actualSubject);
-	}
-
-	@Override
 	public AuthenticationResult currentnessFailure(final TokenVersionVerificationFailure<Long> failure)
 	{
 		return switch (failure.reason())

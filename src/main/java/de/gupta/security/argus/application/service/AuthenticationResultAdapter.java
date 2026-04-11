@@ -21,8 +21,6 @@ public interface AuthenticationResultAdapter
 
 	AuthenticationResult missingVersionClaim(final String versionClaimName);
 
-	AuthenticationResult subjectMismatch(final String expectedSubject, final String actualSubject);
-
 	AuthenticationResult currentnessFailure(final TokenVersionVerificationFailure<Long> failure);
 
 	AuthenticationResult unavailable(final String details);

@@ -22,11 +22,11 @@ public record AuthenticationCacheConfiguration(
 
 	public static AuthenticationCacheConfiguration withDefaults()
 	{
-		final var defaultMaximumCacheSize = 10_000L;
-		final var defaultCacheExpiration = Duration.ofMinutes(5);
-		final var defaultTimeToLive = Duration.ofSeconds(30);
+		final var maximumSize = 10_000L;
+		final var successTimeToLive = Duration.ofMinutes(5);
+		final var failureTimeToLive = Duration.ofSeconds(30);
 
-		return new AuthenticationCacheConfiguration(defaultMaximumCacheSize, defaultCacheExpiration, defaultTimeToLive);
+		return new AuthenticationCacheConfiguration(maximumSize, successTimeToLive, failureTimeToLive);
 	}
 
 	public AuthenticationCacheConfiguration

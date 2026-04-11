@@ -1,6 +1,7 @@
 package de.gupta.security.argus.application.service;
 
 import de.gupta.security.argus.domain.model.authentication.AuthenticationResult;
+import de.gupta.security.argus.domain.model.authentication.FailureDetails;
 import de.gupta.security.argus.domain.model.authentication.availability.AuthenticationUnavailable;
 import de.gupta.security.argus.domain.model.authentication.availability.AuthenticationUnavailableReason;
 import de.gupta.security.argus.domain.model.authentication.credential.InvalidCredential;
@@ -135,7 +136,7 @@ final class DefaultAuthenticationResultAdapterTest
 			assertThat(((InvalidCredential) result).reason())
 					.as(input.description())
 					.isEqualTo(input.expectedReason());
-			assertThat(((InvalidCredential) result).details().map(details -> details.message()))
+			assertThat(((InvalidCredential) result).details().map(FailureDetails::message))
 					.as(input.description())
 					.isEqualTo(input.expectedDetails());
 		}
@@ -211,7 +212,7 @@ final class DefaultAuthenticationResultAdapterTest
 										 InvalidCredential.class,
 										 authenticationResult -> ((InvalidCredential) authenticationResult).reason().name(),
 										 authenticationResult -> ((InvalidCredential) authenticationResult).details()
-							                                                                               .map(details -> details.message()),
+										                                                                   .map(FailureDetails::message),
 										 InvalidCredentialReason.EXPIRED.name(),
 										 Optional.empty()),
 								 new ExchangeFailureCase("when Hermes reports an unknown upstream verification reason",
@@ -219,7 +220,7 @@ final class DefaultAuthenticationResultAdapterTest
 										 InvalidCredential.class,
 										 authenticationResult -> ((InvalidCredential) authenticationResult).reason().name(),
 										 authenticationResult -> ((InvalidCredential) authenticationResult).details()
-							                                                                               .map(details -> details.message()),
+										                                                                   .map(FailureDetails::message),
 										 InvalidCredentialReason.UNSUPPORTED.name(),
 										 Optional.empty()),
 								 new ExchangeFailureCase("when external identity is missing with detail",
@@ -227,7 +228,7 @@ final class DefaultAuthenticationResultAdapterTest
 										 IdentityNotResolved.class,
 										 authenticationResult -> ((IdentityNotResolved) authenticationResult).reason().name(),
 										 authenticationResult -> ((IdentityNotResolved) authenticationResult).details()
-							                                                                                 .map(details -> details.message()),
+										                                                                     .map(FailureDetails::message),
 										 IdentityNotResolvedReason.MISSING_EXTERNAL_IDENTITY.name(),
 										 Optional.of("email")),
 								 new ExchangeFailureCase("when external identity is missing without detail",
@@ -235,7 +236,7 @@ final class DefaultAuthenticationResultAdapterTest
 										 IdentityNotResolved.class,
 										 authenticationResult -> ((IdentityNotResolved) authenticationResult).reason().name(),
 										 authenticationResult -> ((IdentityNotResolved) authenticationResult).details()
-							                                                                                 .map(details -> details.message()),
+										                                                                     .map(FailureDetails::message),
 										 IdentityNotResolvedReason.MISSING_EXTERNAL_IDENTITY.name(),
 										 Optional.empty()),
 								 new ExchangeFailureCase("when user is not found with detail",
@@ -243,7 +244,7 @@ final class DefaultAuthenticationResultAdapterTest
 										 IdentityNotResolved.class,
 										 authenticationResult -> ((IdentityNotResolved) authenticationResult).reason().name(),
 										 authenticationResult -> ((IdentityNotResolved) authenticationResult).details()
-							                                                                                 .map(details -> details.message()),
+										                                                                     .map(FailureDetails::message),
 										 IdentityNotResolvedReason.USER_NOT_FOUND.name(),
 										 Optional.of("external-123")),
 								 new ExchangeFailureCase("when user is not found without detail",
@@ -251,7 +252,7 @@ final class DefaultAuthenticationResultAdapterTest
 										 IdentityNotResolved.class,
 										 authenticationResult -> ((IdentityNotResolved) authenticationResult).reason().name(),
 										 authenticationResult -> ((IdentityNotResolved) authenticationResult).details()
-							                                                                                 .map(details -> details.message()),
+										                                                                     .map(FailureDetails::message),
 										 IdentityNotResolvedReason.USER_NOT_FOUND.name(),
 										 Optional.empty()),
 								 new ExchangeFailureCase("when local subject is missing",
@@ -259,7 +260,7 @@ final class DefaultAuthenticationResultAdapterTest
 										 IdentityNotResolved.class,
 										 authenticationResult -> ((IdentityNotResolved) authenticationResult).reason().name(),
 										 authenticationResult -> ((IdentityNotResolved) authenticationResult).details()
-							                                                                                 .map(details -> details.message()),
+										                                                                     .map(FailureDetails::message),
 										 IdentityNotResolvedReason.MISSING_LOCAL_SUBJECT.name(),
 										 Optional.empty()),
 								 new ExchangeFailureCase("when issuance fails with details",
@@ -267,7 +268,7 @@ final class DefaultAuthenticationResultAdapterTest
 										 AuthenticationUnavailable.class,
 										 authenticationResult -> ((AuthenticationUnavailable) authenticationResult).reason().name(),
 										 authenticationResult -> ((AuthenticationUnavailable) authenticationResult).details()
-							                                                                                       .map(details -> details.message()),
+										                                                                           .map(FailureDetails::message),
 										 AuthenticationUnavailableReason.SERVICE_UNAVAILABLE.name(),
 										 Optional.of("exchange:ISSUANCE_FAILED:jwt-encoder-offline")),
 								 new ExchangeFailureCase("when issuance fails without details",
@@ -275,7 +276,7 @@ final class DefaultAuthenticationResultAdapterTest
 										 AuthenticationUnavailable.class,
 										 authenticationResult -> ((AuthenticationUnavailable) authenticationResult).reason().name(),
 										 authenticationResult -> ((AuthenticationUnavailable) authenticationResult).details()
-							                                                                                       .map(details -> details.message()),
+										                                                                           .map(FailureDetails::message),
 										 AuthenticationUnavailableReason.SERVICE_UNAVAILABLE.name(),
 										 Optional.of("exchange:ISSUANCE_FAILED")))
 			             .map(Arguments::of);
@@ -299,7 +300,7 @@ final class DefaultAuthenticationResultAdapterTest
 			assertThat(((IdentityNotResolved) result).reason())
 					.as(input.description())
 					.isEqualTo(input.expectedReason());
-			assertThat(((IdentityNotResolved) result).details().map(details -> details.message()))
+			assertThat(((IdentityNotResolved) result).details().map(FailureDetails::message))
 					.as(input.description())
 					.isEqualTo(input.expectedDetail());
 		}
@@ -357,7 +358,7 @@ final class DefaultAuthenticationResultAdapterTest
 			assertThat(((AuthenticationUnavailable) result).reason())
 					.as(input.description())
 					.isEqualTo(input.expectedReason());
-			assertThat(((AuthenticationUnavailable) result).details().map(details -> details.message()))
+			assertThat(((AuthenticationUnavailable) result).details().map(FailureDetails::message))
 					.as(input.description())
 					.isEqualTo(input.expectedDetail());
 		}
@@ -372,7 +373,7 @@ final class DefaultAuthenticationResultAdapterTest
 										 AuthenticationNotCurrent.class,
 										 authenticationResult -> ((AuthenticationNotCurrent) authenticationResult).reason().name(),
 										 authenticationResult -> ((AuthenticationNotCurrent) authenticationResult).details()
-							                                                                                      .map(details -> details.message()),
+										                                                                          .map(FailureDetails::message),
 										 AuthenticationNotCurrentReason.VERSION_MISMATCH.name(),
 										 Optional.of("expected=8, actual=7")),
 								 new CurrentnessCase("when version mismatch has no details",
@@ -381,7 +382,7 @@ final class DefaultAuthenticationResultAdapterTest
 										 AuthenticationNotCurrent.class,
 										 authenticationResult -> ((AuthenticationNotCurrent) authenticationResult).reason().name(),
 										 authenticationResult -> ((AuthenticationNotCurrent) authenticationResult).details()
-							                                                                                      .map(details -> details.message()),
+										                                                                          .map(FailureDetails::message),
 										 AuthenticationNotCurrentReason.VERSION_MISMATCH.name(),
 										 Optional.empty()),
 								 new CurrentnessCase("when version lookup fails with details",
@@ -391,7 +392,7 @@ final class DefaultAuthenticationResultAdapterTest
 										 AuthenticationUnavailable.class,
 										 authenticationResult -> ((AuthenticationUnavailable) authenticationResult).reason().name(),
 										 authenticationResult -> ((AuthenticationUnavailable) authenticationResult).details()
-							                                                                                       .map(details -> details.message()),
+										                                                                           .map(FailureDetails::message),
 										 AuthenticationUnavailableReason.IDENTITY_STATE_UNAVAILABLE.name(),
 										 Optional.of("database-timeout")),
 								 new CurrentnessCase("when version lookup fails without details",
@@ -400,7 +401,7 @@ final class DefaultAuthenticationResultAdapterTest
 										 AuthenticationUnavailable.class,
 										 authenticationResult -> ((AuthenticationUnavailable) authenticationResult).reason().name(),
 										 authenticationResult -> ((AuthenticationUnavailable) authenticationResult).details()
-							                                                                                       .map(details -> details.message()),
+										                                                                           .map(FailureDetails::message),
 										 AuthenticationUnavailableReason.IDENTITY_STATE_UNAVAILABLE.name(),
 										 Optional.empty()))
 			             .map(Arguments::of);
@@ -419,11 +420,6 @@ final class DefaultAuthenticationResultAdapterTest
 										 () -> mapper.missingVersionClaim("ver"),
 										 AuthenticationUnavailableReason.SERVICE_UNAVAILABLE,
 										 Optional.of("Missing internal token version claim: ver")),
-								 new AvailabilityCase("when subject mismatch occurs",
-										 () -> mapper.subjectMismatch("expected-user", "actual-user"),
-										 AuthenticationUnavailableReason.SERVICE_UNAVAILABLE,
-										 Optional.of(
-												 "Internal token subject mismatch: expected=expected-user, actual=actual-user")),
 								 new AvailabilityCase("when availability is reported directly",
 										 () -> mapper.unavailable("service-offline"),
 										 AuthenticationUnavailableReason.SERVICE_UNAVAILABLE,
