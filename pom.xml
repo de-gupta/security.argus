@@ -19,8 +19,8 @@
         <security.dependencies.bom.version>1.0.0</security.dependencies.bom.version>
 
         <themis.version>4.0.0</themis.version>
-        <hermes.version>2.0.1-SNAPSHOT</hermes.version>
-        <augustus.version>2.0.1-SNAPSHOT</augustus.version>
+        <hermes.version>3.0.0</hermes.version>
+        <augustus.version>3.0.0</augustus.version>
 
         <caffeine.version>3.2.3</caffeine.version>
     </properties>
