@@ -5,7 +5,6 @@ import de.gupta.security.argus.api.identity.ExternalIdentityAdapter;
 import de.gupta.security.argus.api.identity.IdentityMappingConfiguration;
 import de.gupta.security.argus.api.token.AuthenticatedTokenContract;
 import de.gupta.security.argus.api.token.AuthenticatedTokenMintingConfiguration;
-import de.gupta.security.argus.api.token.AuthenticatedTokenVerificationConfiguration;
 import de.gupta.security.argus.api.token.TokenSignerConfiguration;
 import de.gupta.security.argus.api.trust.TokenTrustPolicy;
 import de.gupta.security.argus.api.trust.UpstreamTrustConfiguration;
@@ -51,8 +50,6 @@ final class LazyAuthenticationDependenciesTest
 				AuthenticatedTokenContract.of("argus", Set.of("inventory"), Duration.ofMinutes(15)),
 				AuthenticatedTokenMintingConfiguration.of(
 						TokenSignerConfiguration.Hmac.of("internal-secret-value-that-is-long-enough")),
-				AuthenticatedTokenVerificationConfiguration.of(
-						TokenTrustPolicy.of(Duration.ZERO, true, Set.of("inventory"), Optional.of("argus"))),
 				identityMappingConfiguration(),
 				CLOCK);
 	}
@@ -70,8 +67,6 @@ final class LazyAuthenticationDependenciesTest
 						publicKey),
 				AuthenticatedTokenContract.of("argus", Set.of("inventory"), Duration.ofMinutes(15)),
 				AuthenticatedTokenMintingConfiguration.of(TokenSignerConfiguration.Rsa.of(privateKey, publicKey)),
-				AuthenticatedTokenVerificationConfiguration.of(
-						TokenTrustPolicy.of(Duration.ZERO, true, Set.of("inventory"), Optional.of("argus"))),
 				identityMappingConfiguration(),
 				CLOCK);
 	}
@@ -89,8 +84,6 @@ final class LazyAuthenticationDependenciesTest
 						publicKey),
 				AuthenticatedTokenContract.of("argus", Set.of("inventory"), Duration.ofMinutes(15)),
 				AuthenticatedTokenMintingConfiguration.of(TokenSignerConfiguration.Ec.of(privateKey, publicKey)),
-				AuthenticatedTokenVerificationConfiguration.of(
-						TokenTrustPolicy.of(Duration.ZERO, true, Set.of("inventory"), Optional.of("argus"))),
 				identityMappingConfiguration(),
 				CLOCK);
 	}
@@ -98,11 +91,10 @@ final class LazyAuthenticationDependenciesTest
 	private static IdentityMappingConfiguration<String, String> identityMappingConfiguration()
 	{
 		return IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
-				externalIdentity -> Optional.of("user-123"),
+				_ -> Optional.of("user-123"),
 				user -> "local-" + user,
 				_ -> Set.of("ROLE_USER"),
-				_ -> 7L,
-				_ -> 7L);
+				_ -> Instant.EPOCH);
 	}
 
 	private static KeyPair generateKeyPair(final String algorithm, final int keySize)
@@ -140,21 +132,13 @@ final class LazyAuthenticationDependenciesTest
 			final LazyAuthenticationDependencies<String, String> dependencies =
 					LazyAuthenticationDependencies.create(input.configuration());
 
-			final AuthenticationDependencies first = dependencies.summon();
-			final AuthenticationDependencies second = dependencies.summon();
+			final AuthenticationDependencies<String, String> first = dependencies.summon();
+			final AuthenticationDependencies<String, String> second = dependencies.summon();
 
-			assertThat(first)
-					.as(input.description())
-					.isSameAs(second);
-			assertThat(first.tokenExchangeService())
-					.as(input.description())
-					.isNotNull();
-			assertThat(first.authenticatedTokenVerifier())
-					.as(input.description())
-					.isNotNull();
-			assertThat(first.tokenVersionVerifier())
-					.as(input.description())
-					.isNotNull();
+			assertThat(first).as(input.description()).isSameAs(second);
+			assertThat(first.tokenExchangeService()).as(input.description()).isNotNull();
+			assertThat(first.upstreamTokenVerifier()).as(input.description()).isNotNull();
+			assertThat(first.tokenRevocationVerifier()).as(input.description()).isNotNull();
 		}
 
 		private Stream<Arguments> cases()

@@ -9,7 +9,7 @@ import de.gupta.security.argus.domain.model.authentication.currentness.Authentic
 import de.gupta.security.argus.domain.model.authentication.currentness.AuthenticationNotCurrentReason;
 import de.gupta.security.argus.domain.model.authentication.identity.IdentityNotResolved;
 import de.gupta.security.argus.domain.model.authentication.identity.IdentityNotResolvedReason;
-import de.gupta.security.augustus.domain.model.TokenVersionVerificationFailure;
+import de.gupta.security.augustus.domain.model.TokenRevocationVerificationFailure;
 import de.gupta.security.hermes.domain.model.ExchangeFailure;
 import de.gupta.security.themis.domain.model.VerificationFailure;
 import de.gupta.security.themis.domain.model.VerificationFailureReason;
@@ -64,33 +64,32 @@ final class DefaultAuthenticationResultAdapter implements AuthenticationResultAd
 	}
 
 	@Override
-	public AuthenticationResult internalCredentialFailure(final VerificationFailure failure)
+	public AuthenticationResult missingIssuedAt()
 	{
-		return unavailable(detailOf("internal-token-verification", failure.reason().name(), failure.details()));
+		return InvalidCredential.of(InvalidCredentialReason.MISSING_REQUIRED_CLAIM,
+				"The upstream token is missing the iat claim required for revocation checking.");
 	}
 
 	@Override
-	public AuthenticationResult missingVersionClaim(final String versionClaimName)
-	{
-		return unavailable("Missing internal token version claim: " + versionClaimName);
-	}
-
-	@Override
-	public AuthenticationResult currentnessFailure(final TokenVersionVerificationFailure<Long> failure)
+	public AuthenticationResult currentnessFailure(final TokenRevocationVerificationFailure failure)
 	{
 		return switch (failure.reason())
 		{
-			case VERSION_MISMATCH -> failure.details()
+			case TOKEN_SUPERSEDED -> failure.details()
 			                                .map(details -> AuthenticationNotCurrent.of(
-													AuthenticationNotCurrentReason.VERSION_MISMATCH, details))
+													AuthenticationNotCurrentReason.REVOKED, details))
 			                                .orElseGet(() -> AuthenticationNotCurrent.of(
-													AuthenticationNotCurrentReason.VERSION_MISMATCH));
-			case VERSION_LOOKUP_FAILED -> failure.details()
-			                                     .map(details -> AuthenticationUnavailable.of(
-														 AuthenticationUnavailableReason.IDENTITY_STATE_UNAVAILABLE,
-														 details))
-			                                     .orElseGet(() -> AuthenticationUnavailable.of(
-														 AuthenticationUnavailableReason.IDENTITY_STATE_UNAVAILABLE));
+													AuthenticationNotCurrentReason.REVOKED));
+			case USER_NOT_FOUND -> failure.details()
+			                              .map(this::userNotFound)
+			                              .orElseGet(() -> IdentityNotResolved.of(
+												  IdentityNotResolvedReason.USER_NOT_FOUND));
+			case REVOCATION_STATE_UNAVAILABLE -> failure.details()
+			                                            .map(details -> AuthenticationUnavailable.of(
+																AuthenticationUnavailableReason.IDENTITY_STATE_UNAVAILABLE,
+																details))
+			                                            .orElseGet(() -> AuthenticationUnavailable.of(
+																AuthenticationUnavailableReason.IDENTITY_STATE_UNAVAILABLE));
 		};
 	}
 
@@ -135,9 +134,7 @@ final class DefaultAuthenticationResultAdapter implements AuthenticationResultAd
 		};
 	}
 
-	private String detailOf(final String phase,
-	                        final String reason,
-	                        final Optional<String> details)
+	private String detailOf(final String phase, final String reason, final Optional<String> details)
 	{
 		return details.map(value -> phase + ":" + reason + ":" + value)
 		              .orElseGet(() -> phase + ":" + reason);

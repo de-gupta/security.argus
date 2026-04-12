@@ -55,7 +55,7 @@ final class CachingAuthenticationServiceTest
 		final RecordingCache cache = new RecordingCache();
 		final AtomicInteger invocations = new AtomicInteger();
 		final AuthenticationNotCurrent failure = AuthenticationNotCurrent.of(
-				AuthenticationNotCurrentReason.VERSION_MISMATCH);
+				AuthenticationNotCurrentReason.REVOKED);
 		final AuthenticationService service = CachingAuthenticationService.wrap(_ ->
 		{
 			invocations.incrementAndGet();

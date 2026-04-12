@@ -5,7 +5,8 @@ import java.util.Optional;
 import java.util.Set;
 
 public sealed interface AuthenticatedIdentity
-		permits NormalizedTokenAuthenticatedIdentity
+		permits NormalizedTokenAuthenticatedIdentity,
+		de.gupta.security.argus.application.service.ExchangeSuccessAuthenticatedIdentity
 {
 	String subject();
 

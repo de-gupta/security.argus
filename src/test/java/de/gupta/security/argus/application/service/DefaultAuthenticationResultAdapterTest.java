@@ -10,8 +10,8 @@ import de.gupta.security.argus.domain.model.authentication.currentness.Authentic
 import de.gupta.security.argus.domain.model.authentication.currentness.AuthenticationNotCurrentReason;
 import de.gupta.security.argus.domain.model.authentication.identity.IdentityNotResolved;
 import de.gupta.security.argus.domain.model.authentication.identity.IdentityNotResolvedReason;
-import de.gupta.security.augustus.domain.model.TokenVersionVerificationFailure;
-import de.gupta.security.augustus.domain.model.TokenVersionVerificationFailureReason;
+import de.gupta.security.augustus.domain.model.TokenRevocationVerificationFailure;
+import de.gupta.security.augustus.domain.model.TokenRevocationVerificationFailureReason;
 import de.gupta.security.hermes.domain.model.ExchangeFailure;
 import de.gupta.security.hermes.domain.model.ExchangeFailureReason;
 import de.gupta.security.themis.domain.model.VerificationFailure;
@@ -93,7 +93,7 @@ final class DefaultAuthenticationResultAdapterTest
 	}
 
 	private record CurrentnessCase(String description,
-	                               TokenVersionVerificationFailure<Long> failure,
+	                               TokenRevocationVerificationFailure failure,
 	                               Class<?> expectedType,
 	                               ReasonExtractor reasonExtractor,
 	                               DetailExtractor detailExtractor,
@@ -366,28 +366,38 @@ final class DefaultAuthenticationResultAdapterTest
 		private Stream<Arguments> currentnessCases()
 		{
 			return Stream.of(
-								 new CurrentnessCase("when version mismatch includes details",
-										 TokenVersionVerificationFailure.of(
-												 TokenVersionVerificationFailureReason.VERSION_MISMATCH,
-												 "expected=8, actual=7"),
+								 new CurrentnessCase("when token is superseded with details",
+										 TokenRevocationVerificationFailure.of(
+												 TokenRevocationVerificationFailureReason.TOKEN_SUPERSEDED,
+												 "token issued before last revocation"),
 										 AuthenticationNotCurrent.class,
 										 authenticationResult -> ((AuthenticationNotCurrent) authenticationResult).reason().name(),
 										 authenticationResult -> ((AuthenticationNotCurrent) authenticationResult).details()
 										                                                                          .map(FailureDetails::message),
-										 AuthenticationNotCurrentReason.VERSION_MISMATCH.name(),
-										 Optional.of("expected=8, actual=7")),
-								 new CurrentnessCase("when version mismatch has no details",
-										 TokenVersionVerificationFailure.of(
-												 TokenVersionVerificationFailureReason.VERSION_MISMATCH),
+										 AuthenticationNotCurrentReason.REVOKED.name(),
+										 Optional.of("token issued before last revocation")),
+								 new CurrentnessCase("when token is superseded without details",
+										 TokenRevocationVerificationFailure.of(
+												 TokenRevocationVerificationFailureReason.TOKEN_SUPERSEDED),
 										 AuthenticationNotCurrent.class,
 										 authenticationResult -> ((AuthenticationNotCurrent) authenticationResult).reason().name(),
 										 authenticationResult -> ((AuthenticationNotCurrent) authenticationResult).details()
 										                                                                          .map(FailureDetails::message),
-										 AuthenticationNotCurrentReason.VERSION_MISMATCH.name(),
+										 AuthenticationNotCurrentReason.REVOKED.name(),
 										 Optional.empty()),
-								 new CurrentnessCase("when version lookup fails with details",
-										 TokenVersionVerificationFailure.of(
-												 TokenVersionVerificationFailureReason.VERSION_LOOKUP_FAILED,
+								 new CurrentnessCase("when user is not found during revocation check",
+										 TokenRevocationVerificationFailure.of(
+												 TokenRevocationVerificationFailureReason.USER_NOT_FOUND,
+												 "external-user-123"),
+										 IdentityNotResolved.class,
+										 authenticationResult -> ((IdentityNotResolved) authenticationResult).reason().name(),
+										 authenticationResult -> ((IdentityNotResolved) authenticationResult).details()
+							                                                                                 .map(FailureDetails::message),
+										 IdentityNotResolvedReason.USER_NOT_FOUND.name(),
+										 Optional.of("external-user-123")),
+								 new CurrentnessCase("when revocation state is unavailable with details",
+										 TokenRevocationVerificationFailure.of(
+												 TokenRevocationVerificationFailureReason.REVOCATION_STATE_UNAVAILABLE,
 												 "database-timeout"),
 										 AuthenticationUnavailable.class,
 										 authenticationResult -> ((AuthenticationUnavailable) authenticationResult).reason().name(),
@@ -395,9 +405,9 @@ final class DefaultAuthenticationResultAdapterTest
 										                                                                           .map(FailureDetails::message),
 										 AuthenticationUnavailableReason.IDENTITY_STATE_UNAVAILABLE.name(),
 										 Optional.of("database-timeout")),
-								 new CurrentnessCase("when version lookup fails without details",
-										 TokenVersionVerificationFailure.of(
-												 TokenVersionVerificationFailureReason.VERSION_LOOKUP_FAILED),
+								 new CurrentnessCase("when revocation state is unavailable without details",
+										 TokenRevocationVerificationFailure.of(
+												 TokenRevocationVerificationFailureReason.REVOCATION_STATE_UNAVAILABLE),
 										 AuthenticationUnavailable.class,
 										 authenticationResult -> ((AuthenticationUnavailable) authenticationResult).reason().name(),
 										 authenticationResult -> ((AuthenticationUnavailable) authenticationResult).details()
@@ -410,16 +420,10 @@ final class DefaultAuthenticationResultAdapterTest
 		private Stream<Arguments> availabilityCases()
 		{
 			return Stream.of(
-								 new AvailabilityCase("when internal token verification fails",
-										 () -> mapper.internalCredentialFailure(new VerificationFailure(
-												 VerificationFailureReason.INVALID_ISSUER,
-												 Optional.of("issuer=wrong"))),
+								 new AvailabilityCase("when availability is reported directly — iat missing maps to unavailable",
+										 () -> mapper.unavailable("missing iat"),
 										 AuthenticationUnavailableReason.SERVICE_UNAVAILABLE,
-										 Optional.of("internal-token-verification:INVALID_ISSUER:issuer=wrong")),
-								 new AvailabilityCase("when version claim is missing",
-										 () -> mapper.missingVersionClaim("ver"),
-										 AuthenticationUnavailableReason.SERVICE_UNAVAILABLE,
-										 Optional.of("Missing internal token version claim: ver")),
+										 Optional.of("missing iat")),
 								 new AvailabilityCase("when availability is reported directly",
 										 () -> mapper.unavailable("service-offline"),
 										 AuthenticationUnavailableReason.SERVICE_UNAVAILABLE,

@@ -51,9 +51,6 @@ final class AuthenticatedTokenContractTest
             assertThat(contract.roleAttributeName())
                     .as("uses the default role attribute name")
                     .isEqualTo("roles");
-            assertThat(contract.versionAttributeName())
-                    .as("uses the default version attribute name")
-                    .isEqualTo("ver");
             assertThat(contract.upstreamIssuerAttributeName())
                     .as("keeps the upstream issuer attribute by default")
                     .contains("upstream_iss");
@@ -76,7 +73,6 @@ final class AuthenticatedTokenContractTest
                             Set.of("inventory"),
                             input.timeToLive(),
                             "roles",
-                            "ver",
                             Optional.of("upstream_iss"),
                             true))
                     .as(input.description())
@@ -119,7 +115,6 @@ final class AuthenticatedTokenContractTest
                                             Set.of("inventory"),
                                             Duration.ofMinutes(10),
                                             "roles",
-                                            "ver",
                                             Optional.of("upstream_iss"),
                                             true),
                                     "issuer must not be blank"),
@@ -128,25 +123,14 @@ final class AuthenticatedTokenContractTest
                                             Set.of("inventory"),
                                             Duration.ofMinutes(10),
                                             " ",
-                                            "ver",
                                             Optional.of("upstream_iss"),
                                             true),
                                     "roleAttributeName must not be blank"),
-                            new BlankFieldCase("when version attribute name is blank",
-                                    () -> AuthenticatedTokenContract.of("argus",
-                                            Set.of("inventory"),
-                                            Duration.ofMinutes(10),
-                                            "roles",
-                                            " ",
-                                            Optional.of("upstream_iss"),
-                                            true),
-                                    "versionAttributeName must not be blank"),
                             new BlankFieldCase("when upstream issuer attribute name is blank",
                                     () -> AuthenticatedTokenContract.of("argus",
                                             Set.of("inventory"),
                                             Duration.ofMinutes(10),
                                             "roles",
-                                            "ver",
                                             Optional.of(" "),
                                             true),
                                     "upstreamIssuerAttributeName must not be blank"))
@@ -161,7 +145,6 @@ final class AuthenticatedTokenContractTest
                                             null,
                                             Duration.ofMinutes(10),
                                             "roles",
-                                            "ver",
                                             Optional.of("upstream_iss"),
                                             true),
                                     "audiences must not be null"),
@@ -170,7 +153,6 @@ final class AuthenticatedTokenContractTest
                                             Set.of("inventory"),
                                             null,
                                             "roles",
-                                            "ver",
                                             Optional.of("upstream_iss"),
                                             true),
                                     "timeToLive must not be null"),
@@ -179,7 +161,6 @@ final class AuthenticatedTokenContractTest
                                             Set.of("inventory"),
                                             Duration.ofMinutes(10),
                                             "roles",
-                                            "ver",
                                             null,
                                             true),
                                     "upstreamIssuerAttributeName must not be null"))

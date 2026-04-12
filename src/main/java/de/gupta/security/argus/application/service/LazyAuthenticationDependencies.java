@@ -4,19 +4,21 @@ import de.gupta.security.argus.api.authentication.AuthenticatorConfiguration;
 import de.gupta.security.argus.api.token.TokenSignerConfiguration;
 import de.gupta.security.argus.api.trust.TokenTrustPolicy;
 import de.gupta.security.argus.api.trust.UpstreamTrustConfiguration;
-import de.gupta.security.augustus.api.TokenVersionVerifier;
-import de.gupta.security.augustus.api.TokenVersionVerifierFactory;
+import de.gupta.security.augustus.api.TokenRevocationVerifier;
+import de.gupta.security.augustus.api.TokenRevocationVerifierFactory;
 import de.gupta.security.hermes.api.*;
 import de.gupta.security.themis.api.TokenVerificationConfiguration;
 import de.gupta.security.themis.api.TokenVerificationPolicy;
 import de.gupta.security.themis.api.TokenVerifier;
 import de.gupta.security.themis.api.TokenVerifierFactory;
 
+import java.time.Duration;
+
 final class LazyAuthenticationDependencies<ExternalIdentity, User>
 {
 	private final AuthenticatorConfiguration<ExternalIdentity, User> configuration;
 
-	private volatile AuthenticationDependencies cachedDependencies;
+	private volatile AuthenticationDependencies<ExternalIdentity, User> cachedDependencies;
 
 	static <ExternalIdentity, User> LazyAuthenticationDependencies<ExternalIdentity, User> create(
 			final AuthenticatorConfiguration<ExternalIdentity, User> configuration)
@@ -24,9 +26,9 @@ final class LazyAuthenticationDependencies<ExternalIdentity, User>
 		return new LazyAuthenticationDependencies<>(configuration);
 	}
 
-	AuthenticationDependencies summon()
+	AuthenticationDependencies<ExternalIdentity, User> summon()
 	{
-		final AuthenticationDependencies presentDependencies = cachedDependencies;
+		final AuthenticationDependencies<ExternalIdentity, User> presentDependencies = cachedDependencies;
 		if (presentDependencies != null)
 		{
 			return presentDependencies;
@@ -42,11 +44,11 @@ final class LazyAuthenticationDependencies<ExternalIdentity, User>
 		}
 	}
 
-	private AuthenticationDependencies createDependencies()
+	private AuthenticationDependencies<ExternalIdentity, User> createDependencies()
 	{
-		return new AuthenticationDependencies(createTokenExchangeService(),
-				createAuthenticatedTokenVerifier(),
-				createTokenVersionVerifier());
+		final TokenVerifier upstreamVerifier = createUpstreamTokenVerifier();
+		return new AuthenticationDependencies<>(upstreamVerifier, createTokenExchangeService(upstreamVerifier),
+				createTokenRevocationVerifier());
 	}
 
 	private TokenVerifier createUpstreamTokenVerifier()
@@ -67,35 +69,13 @@ final class LazyAuthenticationDependencies<ExternalIdentity, User>
 		};
 	}
 
-	private TokenVerifier createAuthenticatedTokenVerifier()
-	{
-		final TokenVerificationConfiguration configuration = toThemisConfigurationWithClaimNames(
-				this.configuration.authenticatedTokenVerificationConfiguration().trustPolicy(),
-				this.configuration.authenticatedTokenContract().roleAttributeName(),
-				this.configuration.authenticatedTokenContract().versionAttributeName());
-
-		return switch (this.configuration.authenticatedTokenMintingConfiguration().tokenSignerConfiguration())
-		{
-			case TokenSignerConfiguration.Hmac hmac -> TokenVerifierFactory.hmac(configuration,
-					hmac.issuerSecret(),
-					this.configuration.clock());
-			case TokenSignerConfiguration.Rsa rsa -> TokenVerifierFactory.rsa(configuration,
-					rsa.issuerPublicKey(),
-					this.configuration.clock());
-			case TokenSignerConfiguration.Ec ec -> TokenVerifierFactory.ec(configuration,
-					ec.issuerPublicKey(),
-					this.configuration.clock());
-		};
-	}
-
-	private TokenExchangeService createTokenExchangeService()
+	private TokenExchangeService createTokenExchangeService(final TokenVerifier upstreamVerifier)
 	{
 		final TokenIssuancePolicy issuancePolicy =
 				TokenIssuancePolicy.of(configuration.authenticatedTokenContract().issuer(),
 						configuration.authenticatedTokenContract().audiences(),
 						configuration.authenticatedTokenContract().timeToLive(),
 						configuration.authenticatedTokenContract().roleAttributeName(),
-						configuration.authenticatedTokenContract().versionAttributeName(),
 						configuration.authenticatedTokenContract().upstreamIssuerAttributeName(),
 						configuration.authenticatedTokenContract().includeTokenId());
 
@@ -107,43 +87,50 @@ final class LazyAuthenticationDependencies<ExternalIdentity, User>
 				                                                       .userResolver()::resolveUser),
 				user -> configuration.identityMappingConfiguration().localSubjectResolver().resolveSubject(user),
 				user -> configuration.identityMappingConfiguration().roleResolver().resolveRoles(user),
-				user -> configuration.identityMappingConfiguration().userTokenVersionResolver().resolveVersion(user),
 				CustomClaimEnricher.none(),
 				configuration.clock());
 
 		return switch (configuration.authenticatedTokenMintingConfiguration().tokenSignerConfiguration())
 		{
-			case TokenSignerConfiguration.Hmac hmac -> TokenExchangeServiceFactory.hmac(createUpstreamTokenVerifier(),
+			case TokenSignerConfiguration.Hmac hmac -> TokenExchangeServiceFactory.hmac(upstreamVerifier,
 					issuancePolicy,
 					hmac.issuerSecret(),
 					exchangeConfiguration);
-			case TokenSignerConfiguration.Rsa rsa -> TokenExchangeServiceFactory.rsa(createUpstreamTokenVerifier(),
+			case TokenSignerConfiguration.Rsa rsa -> TokenExchangeServiceFactory.rsa(upstreamVerifier,
 					issuancePolicy,
 					rsa.issuerPrivateKey(),
 					exchangeConfiguration);
-			case TokenSignerConfiguration.Ec ec -> TokenExchangeServiceFactory.ec(createUpstreamTokenVerifier(),
+			case TokenSignerConfiguration.Ec ec -> TokenExchangeServiceFactory.ec(upstreamVerifier,
 					issuancePolicy,
 					ec.issuerPrivateKey(),
 					exchangeConfiguration);
 		};
 	}
 
-	private TokenVersionVerifier<String, Long> createTokenVersionVerifier()
+	private TokenRevocationVerifier<ExternalIdentity, User> createTokenRevocationVerifier()
 	{
-		return TokenVersionVerifierFactory.create(
-				configuration.identityMappingConfiguration().authenticatedSubjectVersionResolver()::resolveVersion);
+		final var identityMapping = configuration.identityMappingConfiguration();
+		final Duration clockSkew = clockSkewFromUpstreamPolicy();
+
+		return TokenRevocationVerifierFactory.create(
+				externalIdentity -> identityMapping.userResolver().resolveUser(externalIdentity),
+				user -> identityMapping.userRevocationResolver().lastRevokedAt(user),
+				clockSkew);
+	}
+
+	private Duration clockSkewFromUpstreamPolicy()
+	{
+		return switch (configuration.upstreamTrustConfiguration())
+		{
+			case UpstreamTrustConfiguration.Hmac hmac -> hmac.trustPolicy().clockSkew();
+			case UpstreamTrustConfiguration.Rsa rsa -> rsa.trustPolicy().clockSkew();
+			case UpstreamTrustConfiguration.Ec ec -> ec.trustPolicy().clockSkew();
+		};
 	}
 
 	private TokenVerificationConfiguration toThemisConfiguration(final TokenTrustPolicy policy)
 	{
 		return TokenVerificationConfiguration.of(toThemisPolicy(policy));
-	}
-
-	private TokenVerificationConfiguration toThemisConfigurationWithClaimNames(final TokenTrustPolicy policy,
-	                                                                           final String rolesClaimName,
-	                                                                           final String versionClaimName)
-	{
-		return TokenVerificationConfiguration.of(toThemisPolicy(policy), rolesClaimName, versionClaimName);
 	}
 
 	private TokenVerificationPolicy toThemisPolicy(final TokenTrustPolicy policy)

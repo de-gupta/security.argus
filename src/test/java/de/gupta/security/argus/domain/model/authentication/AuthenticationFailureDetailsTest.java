@@ -49,9 +49,9 @@ final class AuthenticationFailureDetailsTest
                                     IdentityNotResolved.of(IdentityNotResolvedReason.USER_NOT_FOUND, "user missing"),
                                     "user missing"),
                             new StringOverloadCase("for currentness checks",
-                                    AuthenticationNotCurrent.of(AuthenticationNotCurrentReason.VERSION_MISMATCH,
-                                            "token version mismatch"),
-                                    "token version mismatch"),
+									AuthenticationNotCurrent.of(AuthenticationNotCurrentReason.REVOKED,
+											"token issued before last revocation"),
+									"token issued before last revocation"),
                             new StringOverloadCase("for availability failures",
                                     AuthenticationUnavailable.of(AuthenticationUnavailableReason.SERVICE_UNAVAILABLE,
                                             "downstream unavailable"),
@@ -119,7 +119,7 @@ final class AuthenticationFailureDetailsTest
                             new EmptyDetailsCase("for identity resolution",
                                     IdentityNotResolved.of(IdentityNotResolvedReason.USER_NOT_FOUND)),
                             new EmptyDetailsCase("for currentness checks",
-                                    AuthenticationNotCurrent.of(AuthenticationNotCurrentReason.SESSION_NOT_CURRENT)),
+									AuthenticationNotCurrent.of(AuthenticationNotCurrentReason.REVOKED)),
                             new EmptyDetailsCase("for availability failures",
                                     AuthenticationUnavailable.of(AuthenticationUnavailableReason.SERVICE_UNAVAILABLE)))
                          .map(Arguments::of);

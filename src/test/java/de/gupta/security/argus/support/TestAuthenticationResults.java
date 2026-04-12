@@ -7,7 +7,6 @@ import de.gupta.security.argus.api.identity.ExternalIdentityAdapter;
 import de.gupta.security.argus.api.identity.IdentityMappingConfiguration;
 import de.gupta.security.argus.api.token.AuthenticatedTokenContract;
 import de.gupta.security.argus.api.token.AuthenticatedTokenMintingConfiguration;
-import de.gupta.security.argus.api.token.AuthenticatedTokenVerificationConfiguration;
 import de.gupta.security.argus.api.token.TokenSignerConfiguration;
 import de.gupta.security.argus.api.trust.TokenTrustPolicy;
 import de.gupta.security.argus.api.trust.UpstreamTrustConfiguration;
@@ -47,18 +46,12 @@ public final class TestAuthenticationResults
 								UPSTREAM_SECRET),
 						AuthenticatedTokenContract.of(INTERNAL_ISSUER, Set.of(AUDIENCE), Duration.ofMinutes(15)),
 						AuthenticatedTokenMintingConfiguration.of(TokenSignerConfiguration.Hmac.of(INTERNAL_SECRET)),
-						AuthenticatedTokenVerificationConfiguration.of(
-								TokenTrustPolicy.of(Duration.ZERO,
-										true,
-										Set.of(AUDIENCE),
-										Optional.of(INTERNAL_ISSUER))),
 						IdentityMappingConfiguration.of(
 								ExternalIdentityAdapter.stringIdentity(),
 								_ -> Optional.of("user-123"),
 								_ -> subject,
 								_ -> Set.of("ROLE_USER"),
-								_ -> 7L,
-								_ -> 7L),
+								_ -> Instant.EPOCH),
 						CLOCK));
 
 		final AuthenticationResult result = authenticator.authenticate(signedUpstreamToken("external-123"));

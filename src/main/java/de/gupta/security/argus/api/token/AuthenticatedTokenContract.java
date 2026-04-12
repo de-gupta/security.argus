@@ -8,23 +8,22 @@ import java.util.Optional;
 import java.util.Set;
 
 public record AuthenticatedTokenContract(String issuer, Set<String> audiences, Duration timeToLive,
-                                         String roleAttributeName, String versionAttributeName,
+                                         String roleAttributeName,
                                          Optional<String> upstreamIssuerAttributeName, boolean includeTokenId)
 {
 	public static AuthenticatedTokenContract of(final String issuer, final Set<String> audiences,
 	                                            final Duration timeToLive, final String roleAttributeName,
-	                                            final String versionAttributeName,
 	                                            final Optional<String> upstreamIssuerAttributeName,
 	                                            final boolean includeTokenId)
 	{
-		return new AuthenticatedTokenContract(issuer, audiences, timeToLive, roleAttributeName, versionAttributeName,
+		return new AuthenticatedTokenContract(issuer, audiences, timeToLive, roleAttributeName,
 				upstreamIssuerAttributeName, includeTokenId);
 	}
 
 	public static AuthenticatedTokenContract of(final String issuer, final Set<String> audiences,
 	                                            final Duration timeToLive)
 	{
-		return of(issuer, audiences, timeToLive, "roles", "ver", Optional.of("upstream_iss"), true);
+		return of(issuer, audiences, timeToLive, "roles", Optional.of("upstream_iss"), true);
 	}
 
 	public AuthenticatedTokenContract
@@ -37,8 +36,6 @@ public record AuthenticatedTokenContract(String issuer, Set<String> audiences, D
 			throw new IllegalArgumentException("timeToLive must be positive");
 		}
 		roleAttributeName = ValidationUtility.requireNonBlank(roleAttributeName, "roleAttributeName must not be blank");
-		versionAttributeName =
-				ValidationUtility.requireNonBlank(versionAttributeName, "versionAttributeName must not be blank");
 		upstreamIssuerAttributeName =
 				Objects.requireNonNull(upstreamIssuerAttributeName, "upstreamIssuerAttributeName must not be null")
 				       .map(value -> ValidationUtility.requireNonBlank(value,

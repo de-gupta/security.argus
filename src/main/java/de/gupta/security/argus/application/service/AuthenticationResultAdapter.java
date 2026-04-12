@@ -1,7 +1,7 @@
 package de.gupta.security.argus.application.service;
 
 import de.gupta.security.argus.domain.model.authentication.AuthenticationResult;
-import de.gupta.security.augustus.domain.model.TokenVersionVerificationFailure;
+import de.gupta.security.augustus.domain.model.TokenRevocationVerificationFailure;
 import de.gupta.security.hermes.domain.model.ExchangeFailure;
 import de.gupta.security.themis.domain.model.VerificationFailure;
 
@@ -17,11 +17,9 @@ public interface AuthenticationResultAdapter
 
 	AuthenticationResult exchangeFailure(final ExchangeFailure failure);
 
-	AuthenticationResult internalCredentialFailure(final VerificationFailure failure);
+	AuthenticationResult missingIssuedAt();
 
-	AuthenticationResult missingVersionClaim(final String versionClaimName);
-
-	AuthenticationResult currentnessFailure(final TokenVersionVerificationFailure<Long> failure);
+	AuthenticationResult currentnessFailure(final TokenRevocationVerificationFailure failure);
 
 	AuthenticationResult unavailable(final String details);
 }

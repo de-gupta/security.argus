@@ -4,7 +4,6 @@ import de.gupta.security.argus.api.identity.ExternalIdentityAdapter;
 import de.gupta.security.argus.api.identity.IdentityMappingConfiguration;
 import de.gupta.security.argus.api.token.AuthenticatedTokenContract;
 import de.gupta.security.argus.api.token.AuthenticatedTokenMintingConfiguration;
-import de.gupta.security.argus.api.token.AuthenticatedTokenVerificationConfiguration;
 import de.gupta.security.argus.api.token.TokenSignerConfiguration;
 import de.gupta.security.argus.api.trust.TokenTrustPolicy;
 import de.gupta.security.argus.api.trust.UpstreamTrustConfiguration;
@@ -44,7 +43,6 @@ import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -62,22 +60,14 @@ final class AuthenticatorAuthenticateTest
 	private static final String DIFFERENT_UPSTREAM_SECRET = "other-upstream-secret-value-long-enough";
 	private static final String INTERNAL_SECRET = "internal-secret-value-that-is-long-enough";
 
-	private static <ExternalIdentity> AuthenticatorConfiguration<ExternalIdentity, String> baseConfiguration(
-			final CryptoMaterial cryptoMaterial,
-			final IdentityMappingConfiguration<ExternalIdentity, String> identityMappingConfiguration)
-	{
-		return baseConfiguration(cryptoMaterial,
-				identityMappingConfiguration,
-				AuthenticatedTokenVerificationConfiguration.of(TokenTrustPolicy.of(Duration.ZERO,
-						true,
-						Set.of(AUDIENCE),
-						Optional.of(INTERNAL_ISSUER))));
-	}
+	// Token iat = CLOCK.instant(). NEVER_REVOKED means lastRevokedAt = EPOCH → always current.
+	// REVOKED_AFTER_ISSUANCE means lastRevokedAt > token.iat → token is stale.
+	private static final Instant NEVER_REVOKED = Instant.EPOCH;
+	private static final Instant REVOKED_AFTER_ISSUANCE = CLOCK.instant().plusSeconds(1);
 
 	private static <ExternalIdentity> AuthenticatorConfiguration<ExternalIdentity, String> baseConfiguration(
 			final CryptoMaterial cryptoMaterial,
-			final IdentityMappingConfiguration<ExternalIdentity, String> identityMappingConfiguration,
-			final AuthenticatedTokenVerificationConfiguration authenticatedTokenVerificationConfiguration)
+			final IdentityMappingConfiguration<ExternalIdentity, String> identityMappingConfiguration)
 	{
 		return AuthenticatorConfiguration.<ExternalIdentity, String>builder()
 		                                 .upstreamTrustConfiguration(cryptoMaterial.upstreamTrustConfiguration())
@@ -86,8 +76,6 @@ final class AuthenticatorAuthenticateTest
 												 Duration.ofMinutes(15)))
 		                                 .authenticatedTokenMintingConfiguration(
 												 cryptoMaterial.authenticatedTokenMintingConfiguration())
-		                                 .authenticatedTokenVerificationConfiguration(
-												 authenticatedTokenVerificationConfiguration)
 		                                 .identityMappingConfiguration(identityMappingConfiguration)
 		                                 .clock(CLOCK)
 		                                 .build();
@@ -180,45 +168,6 @@ final class AuthenticatorAuthenticateTest
 		}
 	}
 
-	private record SuccessCase(String description, Authenticator authenticator, String token)
-	{
-		@Override
-		public String toString()
-		{
-			return description;
-		}
-	}
-
-	private record AdaptedSuccessCase(String description, Authenticator authenticator, String token)
-	{
-		@Override
-		public String toString()
-		{
-			return description;
-		}
-	}
-
-	private record FailureCase(String description, Authenticator authenticator, String token)
-	{
-		@Override
-		public String toString()
-		{
-			return description;
-		}
-	}
-
-	private record IdentityFailureCase(String description,
-	                                   Authenticator authenticator,
-	                                   String token,
-	                                   IdentityNotResolvedReason expectedReason)
-	{
-		@Override
-		public String toString()
-		{
-			return description;
-		}
-	}
-
 	@FunctionalInterface
 	private interface UpstreamTokenFactory
 	{
@@ -227,15 +176,6 @@ final class AuthenticatorAuthenticateTest
 
 	private record ExternalIdentity(String value)
 	{
-	}
-
-	private record RuntimeFailureCase(String description, Authenticator authenticator, String token)
-	{
-		@Override
-		public String toString()
-		{
-			return description;
-		}
 	}
 
 	private record CryptoMaterial(String description,
@@ -256,53 +196,35 @@ final class AuthenticatorAuthenticateTest
 	{
 		@ParameterizedTest(name = "{0}")
 		@MethodSource("cases")
-		void shouldReturnAuthenticatedIdentity(final SuccessCase input)
+		void shouldReturnAuthenticatedIdentity(final String description, final Authenticator authenticator,
+		                                       final String token)
 		{
-			final AuthenticationResult result = input.authenticator().authenticate(input.token());
+			final AuthenticationResult result = authenticator.authenticate(token);
 
-			assertThat(result)
-					.as(input.description())
-					.isInstanceOf(AuthenticationSuccess.class);
-
+			assertThat(result).as(description).isInstanceOf(AuthenticationSuccess.class);
 			final AuthenticationSuccess success = (AuthenticationSuccess) result;
-			assertThat(success.identity().subject())
-					.as(input.description())
-					.isEqualTo("local-user-123");
-			assertThat(success.identity().issuer())
-					.as(input.description())
-					.contains(INTERNAL_ISSUER);
-			assertThat(success.identity().audiences())
-					.as(input.description())
-					.containsExactly(AUDIENCE);
-			assertThat(success.identity().roles())
-					.as(input.description())
-					.containsExactlyInAnyOrder("ROLE_USER", "ROLE_ADMIN");
-			assertThat(success.identity().issuedAt())
-					.as(input.description())
-					.contains(CLOCK.instant());
-			assertThat(success.identity().expiresAt())
-					.as(input.description())
-					.contains(CLOCK.instant().plus(Duration.ofMinutes(15)));
-			assertThat(success.identity().notBefore())
-					.as(input.description())
-					.isEmpty();
+			assertThat(success.identity().subject()).as(description).isEqualTo("local-user-123");
+			assertThat(success.identity().issuer()).as(description).contains(INTERNAL_ISSUER);
+			assertThat(success.identity().audiences()).as(description).containsExactly(AUDIENCE);
+			assertThat(success.identity().roles()).as(description).containsExactlyInAnyOrder("ROLE_USER", "ROLE_ADMIN");
+			assertThat(success.identity().issuedAt()).as(description).contains(CLOCK.instant());
+			assertThat(success.identity().expiresAt()).as(description)
+			                                          .contains(CLOCK.instant().plus(Duration.ofMinutes(15)));
+			assertThat(success.identity().notBefore()).as(description).isEmpty();
 		}
 
 		private Stream<Arguments> cases()
 		{
 			return Stream.of(hmacMaterial(), rsaMaterial(), ecMaterial())
-			             .map(cryptoMaterial -> new SuccessCase(
-								 "when " + cryptoMaterial.description() + " exchange resolves and stays current",
-								 AuthenticatorFactory.create(baseConfiguration(
-										 cryptoMaterial,
+			             .map(cryptoMaterial -> Arguments.of(
+								 "when " + cryptoMaterial.description() + " exchange resolves and is current",
+								 AuthenticatorFactory.create(baseConfiguration(cryptoMaterial,
 										 IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
 												 _ -> Optional.of("user-123"),
 												 user -> "local-" + user,
 												 _ -> Set.of("ROLE_USER", "ROLE_ADMIN"),
-												 _ -> 7L,
-												 _ -> 7L))),
-								 cryptoMaterial.upstreamToken("external-123", Map.of())))
-			             .map(Arguments::of);
+												 _ -> NEVER_REVOKED))),
+								 cryptoMaterial.upstreamToken("external-123", Map.of())));
 		}
 	}
 
@@ -313,35 +235,28 @@ final class AuthenticatorAuthenticateTest
 	{
 		@ParameterizedTest(name = "{0}")
 		@MethodSource("cases")
-		void shouldRejectInvalidCredential(final FailureCase input)
+		void shouldRejectInvalidCredential(final String description, final Authenticator authenticator,
+		                                   final String token)
 		{
-			final AuthenticationResult result = input.authenticator().authenticate(input.token());
+			final AuthenticationResult result = authenticator.authenticate(token);
 
-			assertThat(result)
-					.as(input.description())
-					.isInstanceOf(InvalidCredential.class);
-			assertThat(((InvalidCredential) result).reason())
-					.as(input.description())
-					.isEqualTo(InvalidCredentialReason.INVALID_SIGNATURE);
+			assertThat(result).as(description).isInstanceOf(InvalidCredential.class);
+			assertThat(((InvalidCredential) result).reason()).as(description)
+			                                                 .isEqualTo(InvalidCredentialReason.INVALID_SIGNATURE);
 		}
 
 		private Stream<Arguments> cases()
 		{
-			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(
-					hmacMaterial(),
+			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(hmacMaterial(),
 					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
 							_ -> Optional.of("user-123"),
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER"),
-							_ -> 7L,
-							_ -> 7L)));
+							_ -> NEVER_REVOKED)));
 
-			return Stream.of(new FailureCase("when upstream signature does not match",
-								 authenticator,
-								 signedUpstreamToken("external-123",
-										 Map.of(),
-										 DIFFERENT_UPSTREAM_SECRET)))
-			             .map(Arguments::of);
+			return Stream.of(Arguments.of("when upstream signature does not match",
+					authenticator,
+					signedUpstreamToken("external-123", Map.of(), DIFFERENT_UPSTREAM_SECRET)));
 		}
 	}
 
@@ -352,16 +267,13 @@ final class AuthenticatorAuthenticateTest
 	{
 		@ParameterizedTest(name = "{0}")
 		@MethodSource("cases")
-		void shouldReturnIdentityFailure(final IdentityFailureCase input)
+		void shouldReturnIdentityFailure(final String description, final Authenticator authenticator,
+		                                 final String token, final IdentityNotResolvedReason expectedReason)
 		{
-			final AuthenticationResult result = input.authenticator().authenticate(input.token());
+			final AuthenticationResult result = authenticator.authenticate(token);
 
-			assertThat(result)
-					.as(input.description())
-					.isInstanceOf(IdentityNotResolved.class);
-			assertThat(((IdentityNotResolved) result).reason())
-					.as(input.description())
-					.isEqualTo(input.expectedReason());
+			assertThat(result).as(description).isInstanceOf(IdentityNotResolved.class);
+			assertThat(((IdentityNotResolved) result).reason()).as(description).isEqualTo(expectedReason);
 		}
 
 		private Stream<Arguments> cases()
@@ -373,39 +285,35 @@ final class AuthenticatorAuthenticateTest
 							_ -> Optional.of("user-123"),
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER"),
-							_ -> 7L,
-							_ -> 7L)));
+							_ -> NEVER_REVOKED)));
 			final Authenticator missingUserAuthenticator = AuthenticatorFactory.create(baseConfiguration(
 					hmacMaterial(),
 					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
 							_ -> Optional.empty(),
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER"),
-							_ -> 7L,
-							_ -> 7L)));
+							_ -> NEVER_REVOKED)));
 			final Authenticator missingSubjectAuthenticator = AuthenticatorFactory.create(baseConfiguration(
 					hmacMaterial(),
 					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
 							_ -> Optional.of("user-123"),
 							_ -> " ",
 							_ -> Set.of("ROLE_USER"),
-							_ -> 7L,
-							_ -> 7L)));
+							_ -> NEVER_REVOKED)));
 
 			return Stream.of(
-								 new IdentityFailureCase("when configured external identity claim is missing",
-										 missingIdentityAuthenticator,
-										 hmacMaterial().upstreamToken("external-123", Map.of()),
-										 IdentityNotResolvedReason.MISSING_EXTERNAL_IDENTITY),
-								 new IdentityFailureCase("when no local user can be resolved",
-										 missingUserAuthenticator,
-										 hmacMaterial().upstreamToken("external-123", Map.of()),
-										 IdentityNotResolvedReason.USER_NOT_FOUND),
-								 new IdentityFailureCase("when no stable local subject can be resolved",
-										 missingSubjectAuthenticator,
-										 hmacMaterial().upstreamToken("external-123", Map.of()),
-										 IdentityNotResolvedReason.MISSING_LOCAL_SUBJECT))
-			             .map(Arguments::of);
+					Arguments.of("when configured external identity claim is missing",
+							missingIdentityAuthenticator,
+							hmacMaterial().upstreamToken("external-123", Map.of()),
+							IdentityNotResolvedReason.MISSING_EXTERNAL_IDENTITY),
+					Arguments.of("when no local user can be resolved",
+							missingUserAuthenticator,
+							hmacMaterial().upstreamToken("external-123", Map.of()),
+							IdentityNotResolvedReason.USER_NOT_FOUND),
+					Arguments.of("when no stable local subject can be resolved",
+							missingSubjectAuthenticator,
+							hmacMaterial().upstreamToken("external-123", Map.of()),
+							IdentityNotResolvedReason.MISSING_LOCAL_SUBJECT));
 		}
 	}
 
@@ -416,136 +324,123 @@ final class AuthenticatorAuthenticateTest
 	{
 		@ParameterizedTest(name = "{0}")
 		@MethodSource("cases")
-		void shouldAdaptExternalIdentityBeforeResolvingUser(final AdaptedSuccessCase input)
+		void shouldAdaptExternalIdentityBeforeResolvingUser(final String description,
+		                                                    final Authenticator authenticator, final String token)
 		{
-			final AuthenticationResult result = input.authenticator().authenticate(input.token());
+			final AuthenticationResult result = authenticator.authenticate(token);
 
-			assertThat(result)
-					.as(input.description())
-					.isInstanceOf(AuthenticationSuccess.class);
-			assertThat(((AuthenticationSuccess) result).identity().subject())
-					.as(input.description())
-					.isEqualTo("local-user-123");
+			assertThat(result).as(description).isInstanceOf(AuthenticationSuccess.class);
+			assertThat(((AuthenticationSuccess) result).identity().subject()).as(description)
+			                                                                 .isEqualTo("local-user-123");
 		}
 
 		private Stream<Arguments> cases()
 		{
-			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(
-					hmacMaterial(),
+			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(hmacMaterial(),
 					IdentityMappingConfiguration.of(rawIdentity -> Optional.of(new ExternalIdentity(rawIdentity)),
 							externalIdentity -> Optional.of(externalIdentity.value().replace("external", "user")),
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER"),
-							_ -> 7L,
-							_ -> 7L)));
+							_ -> NEVER_REVOKED)));
 
-			return Stream.of(new AdaptedSuccessCase("when an adapter transforms the raw external identity",
-								 authenticator,
-								 hmacMaterial().upstreamToken("external-123", Map.of())))
-			             .map(Arguments::of);
+			return Stream.of(Arguments.of("when an adapter transforms the raw external identity",
+					authenticator,
+					hmacMaterial().upstreamToken("external-123", Map.of())));
 		}
 	}
 
 	@Nested
-	@DisplayName("as currentness failure")
+	@DisplayName("as currentness failure (token superseded by revocation)")
 	@TestInstance(PER_CLASS)
 	final class CurrentnessFailure
 	{
 		@ParameterizedTest(name = "{0}")
 		@MethodSource("cases")
-		void shouldReturnNotCurrent(final FailureCase input)
+		void shouldReturnNotCurrent(final String description, final Authenticator authenticator, final String token)
 		{
-			final AuthenticationResult result = input.authenticator().authenticate(input.token());
+			final AuthenticationResult result = authenticator.authenticate(token);
 
-			assertThat(result)
-					.as(input.description())
-					.isInstanceOf(AuthenticationNotCurrent.class);
-			assertThat(((AuthenticationNotCurrent) result).reason())
-					.as(input.description())
-					.isEqualTo(AuthenticationNotCurrentReason.VERSION_MISMATCH);
+			assertThat(result).as(description).isInstanceOf(AuthenticationNotCurrent.class);
+			assertThat(((AuthenticationNotCurrent) result).reason()).as(description)
+			                                                        .isEqualTo(AuthenticationNotCurrentReason.REVOKED);
 		}
 
 		private Stream<Arguments> cases()
 		{
-			final AtomicLong currentVersion = new AtomicLong(8L);
-			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(
-					hmacMaterial(),
+			// Token iat = CLOCK.instant(). lastRevokedAt = CLOCK.instant().plusSeconds(1) > iat → superseded.
+			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(hmacMaterial(),
 					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
 							_ -> Optional.of("user-123"),
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER"),
-							_ -> 7L,
-							_ -> currentVersion.get())));
+							_ -> REVOKED_AFTER_ISSUANCE)));
 
-			return Stream.of(new FailureCase("when token version is outdated immediately after minting",
-								 authenticator,
-								 hmacMaterial().upstreamToken("external-123", Map.of())))
-			             .map(Arguments::of);
+			return Stream.of(Arguments.of("when token was issued before the last revocation event",
+					authenticator,
+					hmacMaterial().upstreamToken("external-123", Map.of())));
 		}
 	}
 
 	@Nested
-	@DisplayName("as internal pipeline failure")
+	@DisplayName("as revocation state unavailable")
 	@TestInstance(PER_CLASS)
-	final class InternalPipelineFailure
+	final class RevocationStateUnavailable
 	{
 		@ParameterizedTest(name = "{0}")
 		@MethodSource("cases")
-		void shouldReturnUnavailable(final FailureCase input)
+		void shouldReturnUnavailableWhenRevocationResolutionThrows(final String description,
+		                                                           final Authenticator authenticator,
+		                                                           final String token)
 		{
-			final AuthenticationResult result = input.authenticator().authenticate(input.token());
+			final AuthenticationResult result = authenticator.authenticate(token);
 
-			assertThat(result)
-					.as(input.description())
-					.isInstanceOf(AuthenticationUnavailable.class);
-			assertThat(((AuthenticationUnavailable) result).reason())
-					.as(input.description())
-					.isEqualTo(AuthenticationUnavailableReason.SERVICE_UNAVAILABLE);
+			assertThat(result).as(description).isInstanceOf(AuthenticationUnavailable.class);
+			assertThat(((AuthenticationUnavailable) result).reason()).as(description)
+			                                                         .isEqualTo(
+																			 AuthenticationUnavailableReason.IDENTITY_STATE_UNAVAILABLE);
 		}
 
 		private Stream<Arguments> cases()
 		{
-			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(
-					hmacMaterial(),
+			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(hmacMaterial(),
 					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
 							_ -> Optional.of("user-123"),
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER"),
-							_ -> 7L,
-							_ -> 7L),
-					AuthenticatedTokenVerificationConfiguration.of(
-							TokenTrustPolicy.of(Duration.ZERO, true, Set.of(AUDIENCE), Optional.of("wrong-issuer")))));
+							_ ->
+							{
+								throw new RuntimeException("revocation store offline");
+							})));
 
-			return Stream.of(new FailureCase("when internally issued token cannot be re-verified",
-								 authenticator,
-								 hmacMaterial().upstreamToken("external-123", Map.of())))
-			             .map(Arguments::of);
+			return Stream.of(Arguments.of("when revocation store throws during currentness check",
+					authenticator,
+					hmacMaterial().upstreamToken("external-123", Map.of())));
 		}
 	}
 
 	@Nested
-	@DisplayName("as runtime pipeline failure")
+	@DisplayName("as runtime pipeline failure during revocation check")
 	@TestInstance(PER_CLASS)
 	final class RuntimePipelineFailure
 	{
 		@ParameterizedTest(name = "{0}")
 		@MethodSource("cases")
-		void shouldReturnUnavailableWhenResolutionThrows(final RuntimeFailureCase input)
+		void shouldReturnUnavailableWhenResolutionThrows(final String description, final Authenticator authenticator,
+		                                                 final String token)
 		{
-			final AuthenticationResult result = input.authenticator().authenticate(input.token());
+			final AuthenticationResult result = authenticator.authenticate(token);
 
-			assertThat(result)
-					.as(input.description())
-					.isInstanceOf(AuthenticationUnavailable.class);
-			assertThat(((AuthenticationUnavailable) result).reason())
-					.as(input.description())
-					.isEqualTo(AuthenticationUnavailableReason.SERVICE_UNAVAILABLE);
+			// User resolver throws during augustus revocation check (before hermes exchange),
+			// which maps to IDENTITY_STATE_UNAVAILABLE (revocation state unavailable).
+			assertThat(result).as(description).isInstanceOf(AuthenticationUnavailable.class);
+			assertThat(((AuthenticationUnavailable) result).reason()).as(description)
+			                                                         .isEqualTo(
+																			 AuthenticationUnavailableReason.IDENTITY_STATE_UNAVAILABLE);
 		}
 
 		private Stream<Arguments> cases()
 		{
-			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(
-					hmacMaterial(),
+			final Authenticator authenticator = AuthenticatorFactory.create(baseConfiguration(hmacMaterial(),
 					IdentityMappingConfiguration.of(ExternalIdentityAdapter.stringIdentity(),
 							_ ->
 							{
@@ -553,13 +448,11 @@ final class AuthenticatorAuthenticateTest
 							},
 							user -> "local-" + user,
 							_ -> Set.of("ROLE_USER"),
-							_ -> 7L,
-							_ -> 7L)));
+							_ -> NEVER_REVOKED)));
 
-			return Stream.of(new RuntimeFailureCase("when user resolution throws unexpectedly",
-								 authenticator,
-								 hmacMaterial().upstreamToken("external-123", Map.of())))
-			             .map(Arguments::of);
+			return Stream.of(Arguments.of("when user resolution throws during revocation check",
+					authenticator,
+					hmacMaterial().upstreamToken("external-123", Map.of())));
 		}
 	}
 }
