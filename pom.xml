@@ -5,7 +5,7 @@
     <parent>
         <groupId>io.github.de-gupta</groupId>
         <artifactId>security.parent</artifactId>
-        <version>1.0.0</version>
+        <version>1.1.0</version>
     </parent>
 
     <artifactId>security.argus</artifactId>
@@ -16,26 +16,12 @@
     <url>https://github.com/de-gupta/security.argus.git</url>
 
     <properties>
-        <security.dependencies.bom.version>1.0.0</security.dependencies.bom.version>
-
-        <themis.version>4.0.0</themis.version>
-        <hermes.version>3.0.0</hermes.version>
-        <augustus.version>3.0.0</augustus.version>
+        <themis.version>4.0.1</themis.version>
+        <hermes.version>3.0.1</hermes.version>
+        <augustus.version>3.0.1</augustus.version>
 
         <caffeine.version>3.2.3</caffeine.version>
     </properties>
-
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>io.github.de-gupta</groupId>
-                <artifactId>security.dependencies.bom</artifactId>
-                <version>${security.dependencies.bom.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
 
     <dependencies>
         <dependency>
